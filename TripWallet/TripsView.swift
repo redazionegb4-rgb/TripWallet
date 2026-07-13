@@ -29,7 +29,7 @@ struct TripsView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("I miei viaggi")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showNewTrip = true
                 } label: {
@@ -136,7 +136,7 @@ struct NewTripWizard: View {
             .navigationTitle(step == 0 ? "Nuovo viaggio" : step == 1 ? "Copertina" : "Organizza")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
                 }
             }

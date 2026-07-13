@@ -8,7 +8,21 @@ struct TripDetailView: View {
         if let binding = store.binding(for: tripID) {
             TripDetailContent(trip: binding)
         } else {
-            ContentUnavailableView("Viaggio non trovato", systemImage: "airplane")
+            VStack(spacing: 16) {
+                Image(systemName: "airplane")
+                    .font(.system(size: 54))
+                    .foregroundStyle(AppPalette.purple)
+
+                Text("Viaggio non trovato")
+                    .font(.title2.bold())
+
+                Text("Il viaggio potrebbe essere stato eliminato o non è più disponibile.")
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(30)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
         }
     }
 }
