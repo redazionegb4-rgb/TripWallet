@@ -43,7 +43,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
 
             Button("Esci dal profilo", role: .destructive) {
-                store.profile = UserProfile()
+                store.profile.isLoggedIn = false
             }
         }
         .frame(maxWidth: .infinity)

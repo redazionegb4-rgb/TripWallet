@@ -3,6 +3,7 @@ import Foundation
 struct UserProfile: Codable, Equatable {
     var name: String = ""
     var email: String = ""
+    var passwordHash: String? = nil
     var isLoggedIn: Bool = false
 }
 

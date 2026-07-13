@@ -1,4 +1,5 @@
 import SwiftUI
+import CryptoKit
 
 struct AppPalette {
     static let purple = Color(red: 0.43, green: 0.24, blue: 0.96)
@@ -50,12 +51,22 @@ struct RootView: View {
 
 struct LoginView: View {
     @EnvironmentObject private var store: TravelStore
+
+    @State private var isRegistering = true
     @State private var name = ""
     @State private var email = ""
+    @State private var password = ""
+    @State private var errorMessage = ""
+
+    private var normalizedEmail: String {
+        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
 
     private var canContinue: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        email.contains("@")
+        let validEmail = normalizedEmail.contains("@")
+        let validPassword = password.count >= 6
+        let validName = !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return validEmail && validPassword && (!isRegistering || validName)
     }
 
     var body: some View {
@@ -68,66 +79,129 @@ struct LoginView: View {
                 .frame(width: 360, height: 360)
                 .offset(x: 150, y: -280)
 
-            VStack(spacing: 22) {
-                Spacer()
+            ScrollView {
+                VStack(spacing: 22) {
+                    Image(systemName: "airplane.circle.fill")
+                        .font(.system(size: 82))
+                        .foregroundStyle(.white)
+                        .padding(.top, 50)
 
-                Image(systemName: "airplane.circle.fill")
-                    .font(.system(size: 86))
-                    .foregroundStyle(.white)
+                    Text(isRegistering ? "Crea il tuo profilo" : "Bentornato")
+                        .font(.system(size: 34, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
 
-                Text("Benvenuto in TripWallet")
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-
-                Text("Tutti i tuoi viaggi, biglietti e ricordi in un unico posto.")
-                    .font(.headline)
-                    .foregroundStyle(.white.opacity(0.88))
-                    .multilineTextAlignment(.center)
-
-                VStack(spacing: 14) {
-                    TextField("Nome", text: $name)
-                        .textContentType(.name)
-                        .padding(17)
-                        .background(.white.opacity(0.94))
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-
-                    TextField("Email", text: $email)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .padding(17)
-                        .background(.white.opacity(0.94))
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                }
-
-                Button {
-                    store.profile = UserProfile(
-                        name: name.trimmingCharacters(in: .whitespaces),
-                        email: email.trimmingCharacters(in: .whitespaces),
-                        isLoggedIn: true
-                    )
-                } label: {
-                    Text("Entra in TripWallet")
+                    Text("Registrazione locale: nessun accesso Apple e nessun account esterno.")
                         .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .background(.white)
-                        .foregroundStyle(AppPalette.purple)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .foregroundStyle(.white.opacity(0.88))
+                        .multilineTextAlignment(.center)
+
+                    Picker("Accesso", selection: $isRegistering) {
+                        Text("Registrati").tag(true)
+                        Text("Accedi").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(5)
+                    .background(.white.opacity(0.92))
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+
+                    VStack(spacing: 14) {
+                        if isRegistering {
+                            TextField("Nome", text: $name)
+                                .textContentType(.name)
+                                .padding(17)
+                                .background(.white.opacity(0.95))
+                                .clipShape(RoundedRectangle(cornerRadius: 18))
+                        }
+
+                        TextField("Email", text: $email)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .padding(17)
+                            .background(.white.opacity(0.95))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+
+                        SecureField("Password (almeno 6 caratteri)", text: $password)
+                            .textContentType(isRegistering ? .newPassword : .password)
+                            .padding(17)
+                            .background(.white.opacity(0.95))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                    }
+
+                    if !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(12)
+                            .frame(maxWidth: .infinity)
+                            .background(.red.opacity(0.35))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    Button {
+                        submit()
+                    } label: {
+                        Text(isRegistering ? "Crea profilo" : "Accedi")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 17)
+                            .background(.white)
+                            .foregroundStyle(AppPalette.purple)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                    }
+                    .disabled(!canContinue)
+                    .opacity(canContinue ? 1 : 0.55)
+
+                    Text("Le credenziali restano sul dispositivo. I dati dei viaggi vengono salvati nel backup iCloud.")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                        .padding(.bottom, 30)
                 }
-                .disabled(!canContinue)
-                .opacity(canContinue ? 1 : 0.55)
-
-                Text("Il profilo resta sul tuo dispositivo e nel tuo backup iCloud.")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
-
-                Spacer()
+                .padding(.horizontal, 28)
             }
-            .padding(28)
         }
+        .onAppear {
+            if !store.profile.email.isEmpty {
+                isRegistering = false
+                email = store.profile.email
+            }
+        }
+    }
+
+    private func submit() {
+        errorMessage = ""
+        let hash = password.sha256
+
+        if isRegistering {
+            store.profile = UserProfile(
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                email: normalizedEmail,
+                passwordHash: hash,
+                isLoggedIn: true
+            )
+        } else {
+            guard !store.profile.email.isEmpty else {
+                errorMessage = "Non esiste ancora un profilo locale. Seleziona Registrati."
+                return
+            }
+
+            guard store.profile.email.lowercased() == normalizedEmail,
+                  store.profile.passwordHash == hash else {
+                errorMessage = "Email o password non corretti."
+                return
+            }
+
+            store.profile.isLoggedIn = true
+        }
+    }
+}
+
+private extension String {
+    var sha256: String {
+        SHA256.hash(data: Data(utf8)).map { String(format: "%02x", $0) }.joined()
     }
 }
 
