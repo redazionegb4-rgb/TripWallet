@@ -1,127 +1,131 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject private var store: TravelStore
-    @AppStorage("appearance") private var appearance = "system"
-    @AppStorage("lockEnabled") private var lockEnabled = false
-
-    @State private var exportURL: URL?
-    @State private var showShareSheet = false
-    @State private var showImporter = false
     @State private var message = ""
-    @State private var showMessage = false
+    @State private var isWorking = false
 
     var body: some View {
-        Form {
-            Section("Aspetto") {
-                Picker("Tema", selection: $appearance) {
-                    Text("Automatico").tag("system")
-                    Text("Chiaro").tag("light")
-                    Text("Scuro").tag("dark")
-                }
+        ScrollView {
+            VStack(spacing: 22) {
+                profileCard
+                iCloudCard
+                infoCard
             }
-
-            Section("Privacy") {
-                Toggle(isOn: $lockEnabled) {
-                    Label("Proteggi con Face ID", systemImage: "faceid")
-                }
-            }
-
-            Section("Backup") {
-                Button(action: exportBackup) {
-                    Label("Esporta backup", systemImage: "square.and.arrow.up")
-                }
-
-                Button {
-                    showImporter = true
-                } label: {
-                    Label("Importa backup", systemImage: "square.and.arrow.down")
-                }
-
-                Button(action: saveICloudBackup) {
-                    Label("Salva su iCloud Drive", systemImage: "icloud.and.arrow.up")
-                }
-
-                Button(action: restoreICloudBackup) {
-                    Label("Ripristina da iCloud Drive", systemImage: "icloud.and.arrow.down")
-                }
-            }
-
-            Section("Informazioni") {
-                LabeledContent("Versione", value: "1.0 (Build 7)")
-                LabeledContent("Archiviazione", value: "Locale e offline")
-                Text("TripWallet non richiede registrazione e non invia i dati a server esterni.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            .padding(20)
         }
-        .navigationTitle("Impostazioni")
-        .sheet(isPresented: $showShareSheet) {
-            if let exportURL {
-                ShareSheet(items: [exportURL])
-            }
-        }
-        .fileImporter(
-            isPresented: $showImporter,
-            allowedContentTypes: [UTType(filenameExtension: "travelwallet") ?? .data, .json]
-        ) { result in
-            do {
-                let url = try result.get()
-                try store.importData(from: url)
-                message = "Backup importato correttamente."
-            } catch {
-                message = error.localizedDescription
-            }
-            showMessage = true
-        }
-        .alert("TripWallet", isPresented: $showMessage) {
-            Button("OK", role: .cancel) { }
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("Profilo")
+        .alert("TripWallet", isPresented: Binding(
+            get: { !message.isEmpty },
+            set: { if !$0 { message = "" } }
+        )) {
+            Button("OK", role: .cancel) { message = "" }
         } message: {
             Text(message)
         }
     }
 
-    private func exportBackup() {
-        do {
-            exportURL = try store.exportData()
-            showShareSheet = true
-        } catch {
-            message = error.localizedDescription
-            showMessage = true
+    private var profileCard: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                AppPalette.warmGradient
+                Text(store.profile.name.prefix(1).uppercased())
+                    .font(.system(size: 34, weight: .heavy))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 82, height: 82)
+            .clipShape(Circle())
+
+            Text(store.profile.name)
+                .font(.title2.bold())
+            Text(store.profile.email)
+                .foregroundStyle(.secondary)
+
+            Button("Esci dal profilo", role: .destructive) {
+                store.profile = UserProfile()
+            }
         }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 28))
     }
 
-    private func saveICloudBackup() {
-        do {
-            _ = try store.saveToICloud()
-            message = "Backup salvato su iCloud Drive."
-        } catch {
-            message = error.localizedDescription
+    private var iCloudCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Backup iCloud", systemImage: "icloud.fill")
+                .font(.title2.bold())
+                .foregroundStyle(AppPalette.blue)
+
+            Text("TripWallet salva automaticamente viaggi, biglietti e profilo su iCloud. Non sono presenti backup manuali o altri servizi.")
+                .foregroundStyle(.secondary)
+
+            Button {
+                isWorking = true
+                Task {
+                    do {
+                        try await store.saveToICloud()
+                        message = "Backup iCloud completato."
+                    } catch {
+                        message = error.localizedDescription
+                    }
+                    isWorking = false
+                }
+            } label: {
+                Label(
+                    isWorking ? "Salvataggio…" : "Esegui backup ora",
+                    systemImage: "arrow.up.circle.fill"
+                )
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(AppPalette.gradient)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+            }
+            .disabled(isWorking)
+
+            Button {
+                isWorking = true
+                Task {
+                    do {
+                        try await store.restoreFromICloud()
+                        message = "Dati ripristinati da iCloud."
+                    } catch {
+                        message = error.localizedDescription
+                    }
+                    isWorking = false
+                }
+            } label: {
+                Label("Ripristina da iCloud", systemImage: "arrow.down.circle.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(AppPalette.blue.opacity(0.12))
+                    .foregroundStyle(AppPalette.blue)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+            }
+            .disabled(isWorking)
         }
-        showMessage = true
+        .padding(22)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 28))
     }
 
-    private func restoreICloudBackup() {
-        do {
-            try store.restoreFromICloud()
-            message = "Backup iCloud ripristinato."
-        } catch {
-            message = error.localizedDescription
+    private var infoCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("TripWallet")
+                .font(.headline)
+            Text("Versione 2.0 • Solo iPhone")
+                .foregroundStyle(.secondary)
+            Text("I dati restano sul dispositivo e nel tuo account iCloud.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        showMessage = true
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 28))
     }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(
-        _ uiViewController: UIActivityViewController,
-        context: Context
-    ) { }
 }

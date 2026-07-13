@@ -1,16 +1,167 @@
 import SwiftUI
 
 struct TripDetailView: View {
-    @Binding var trip: Trip
-    @State private var editTrip=false
-    var body: some View { List { Section { VStack(alignment:.leading,spacing:10){HStack{Text(flag(trip.countryCode)).font(.system(size:44));VStack(alignment:.leading){Text(trip.destination).font(.title.bold());Text(trip.startDate.formatted(date:.long,time:.omitted)+" – "+trip.endDate.formatted(date:.long,time:.omitted)).foregroundStyle(.secondary)}};if !trip.notes.isEmpty{Text(trip.notes)}}.padding(.vertical,8) }
-        Section("Organizza") {
-            NavigationLink { ItemsView(trip:$trip) } label:{DetailLink(icon:"calendar.badge.clock",title:"Itinerario e prenotazioni",value:"\(trip.items.count)")}
-            NavigationLink { ExpensesView(trip:$trip) } label:{DetailLink(icon:"eurosign.circle.fill",title:"Budget e spese",value:trip.totalSpent.formatted(.currency(code:"EUR")))}
-            NavigationLink { PackingView(trip:$trip) } label:{DetailLink(icon:"suitcase.rolling.fill",title:"Valigia",value:"\(trip.packing.filter{$0.packed}.count)/\(trip.packing.count)")}
-            NavigationLink { DocumentsView(trip:$trip) } label:{DetailLink(icon:"doc.fill",title:"Documenti e biglietti",value:"\(trip.documents.count)")}
-            NavigationLink { PlacesView(trip:$trip) } label:{DetailLink(icon:"mappin.and.ellipse",title:"Luoghi salvati",value:"\(trip.places.count)")}
+    @EnvironmentObject private var store: TravelStore
+    let tripID: UUID
+
+    var body: some View {
+        if let binding = store.binding(for: tripID) {
+            TripDetailContent(trip: binding)
+        } else {
+            ContentUnavailableView("Viaggio non trovato", systemImage: "airplane")
         }
-    }.navigationTitle(trip.title).toolbar{Button("Modifica"){editTrip=true}}.sheet(isPresented:$editTrip){NavigationStack{TripEditorView(existing:trip)}} }
+    }
 }
-struct DetailLink:View{let icon,title,value:String;var body:some View{HStack{Image(systemName:icon).foregroundStyle(.blue).frame(width:30);Text(title);Spacer();Text(value).foregroundStyle(.secondary)}}}
+
+private struct TripDetailContent: View {
+    @Binding var trip: Trip
+
+    private let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 22) {
+                HeroTripCardDetail(trip: trip)
+
+                LazyVGrid(columns: columns, spacing: 14) {
+                    NavigationLink {
+                        ItemsView(trip: $trip)
+                    } label: {
+                        FeatureCard(
+                            title: "Itinerario",
+                            subtitle: "\(trip.items.count) elementi",
+                            icon: "calendar.badge.clock",
+                            colors: [AppPalette.purple, AppPalette.blue]
+                        )
+                    }
+
+                    NavigationLink {
+                        DocumentsView(trip: $trip)
+                    } label: {
+                        FeatureCard(
+                            title: "Biglietti",
+                            subtitle: "\(trip.documents.count) salvati",
+                            icon: "qrcode.viewfinder",
+                            colors: [AppPalette.pink, AppPalette.orange]
+                        )
+                    }
+
+                    NavigationLink {
+                        ExpensesView(trip: $trip)
+                    } label: {
+                        FeatureCard(
+                            title: "Spese",
+                            subtitle: trip.totalSpent.formatted(.currency(code: "EUR")),
+                            icon: "creditcard.fill",
+                            colors: [AppPalette.blue, AppPalette.cyan]
+                        )
+                    }
+
+                    NavigationLink {
+                        PackingView(trip: $trip)
+                    } label: {
+                        FeatureCard(
+                            title: "Valigia",
+                            subtitle: "\(trip.packing.filter(\.packed).count)/\(trip.packing.count)",
+                            icon: "suitcase.rolling.fill",
+                            colors: [AppPalette.orange, AppPalette.pink]
+                        )
+                    }
+
+                    NavigationLink {
+                        PlacesView(trip: $trip)
+                    } label: {
+                        FeatureCard(
+                            title: "Luoghi",
+                            subtitle: "\(trip.places.count) salvati",
+                            icon: "map.fill",
+                            colors: [AppPalette.cyan, AppPalette.blue]
+                        )
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle(trip.title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct HeroTripCardDetail: View {
+    let trip: Trip
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            Group {
+                if
+                    let data = trip.coverImageData,
+                    let image = UIImage(data: data)
+                {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    AppPalette.warmGradient
+                }
+            }
+            .frame(height: 245)
+            .clipped()
+
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.75)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(flagEmoji(countryCode: trip.countryCode)) \(trip.city)")
+                    .font(.system(size: 34, weight: .heavy, design: .rounded))
+                Text(trip.country)
+                    .font(.headline)
+                Text("\(trip.startDate.formatted(date: .long, time: .omitted)) – \(trip.endDate.formatted(date: .long, time: .omitted))")
+                    .font(.subheadline)
+            }
+            .foregroundStyle(.white)
+            .padding(22)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 30))
+    }
+}
+
+private struct FeatureCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let colors: [Color]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            Image(systemName: icon)
+                .font(.title2)
+                .frame(width: 48, height: 48)
+                .background(.white.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 15))
+
+            Text(title)
+                .font(.headline)
+            Text(subtitle)
+                .font(.caption)
+                .opacity(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(
+            LinearGradient(
+                colors: colors,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .foregroundStyle(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+    }
+}

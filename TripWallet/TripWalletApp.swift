@@ -1,32 +1,28 @@
 import SwiftUI
-import UserNotifications
 
 @main
 struct TripWalletApp: App {
     @StateObject private var store = TravelStore()
-    @AppStorage("appearance") private var appearance = "system"
-    @AppStorage("lockEnabled") private var lockEnabled = false
-    @State private var unlocked = false
+    @State private var showNotificationIntro = false
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if lockEnabled && !unlocked {
-                    LockView(unlocked: $unlocked)
-                } else {
+                if store.profile.isLoggedIn {
                     RootView()
-                        .environmentObject(store)
+                        .sheet(isPresented: $showNotificationIntro) {
+                            NotificationIntroView(isPresented: $showNotificationIntro)
+                        }
+                        .onAppear {
+                            showNotificationIntro = !UserDefaults.standard.bool(
+                                forKey: "notificationIntroSeen"
+                            )
+                        }
+                } else {
+                    LoginView()
                 }
             }
-            .preferredColorScheme(colorScheme)
-            .task {
-                await NotificationManager.shared.requestAuthorization()
-                if !lockEnabled { unlocked = true }
-            }
+            .environmentObject(store)
         }
-    }
-
-    private var colorScheme: ColorScheme? {
-        appearance == "light" ? .light : appearance == "dark" ? .dark : nil
     }
 }

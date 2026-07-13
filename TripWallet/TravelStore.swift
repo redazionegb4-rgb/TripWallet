@@ -3,71 +3,175 @@ import SwiftUI
 
 @MainActor
 final class TravelStore: ObservableObject {
-    @Published var trips: [Trip] = [] { didSet { save() } }
-    @Published var selectedTripID: UUID?
-    private let fileURL: URL
+    @Published var trips: [Trip] = [] {
+        didSet {
+            guard !isLoading else { return }
+            saveLocal()
+            Task { try? await saveToICloud() }
+        }
+    }
+
+    @Published var profile: UserProfile = UserProfile() {
+        didSet { saveProfile() }
+    }
+
+    private let localURL: URL
+    private let profileURL: URL
     private var isLoading = true
 
     init() {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("TripWallet", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        fileURL = dir.appendingPathComponent("travelwallet.json")
-        load()
+        let directory = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent("TripWallet", isDirectory: true)
+
+        try? FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+
+        localURL = directory.appendingPathComponent("trips.json")
+        profileURL = directory.appendingPathComponent("profile.json")
+
+        loadLocal()
+        loadProfile()
         isLoading = false
+
+        Task {
+            try? await restoreFromICloudIfNewer()
+        }
     }
 
-    var upcomingTrips: [Trip] { trips.filter { $0.endDate >= Calendar.current.startOfDay(for: Date()) }.sorted { $0.startDate < $1.startDate } }
-    var pastTrips: [Trip] { trips.filter { $0.endDate < Calendar.current.startOfDay(for: Date()) }.sorted { $0.endDate > $1.endDate } }
-
-    func add(_ trip: Trip) { trips.append(trip) }
-    func delete(at offsets: IndexSet, from list: [Trip]) {
-        let ids = offsets.map { list[$0].id }
-        trips.removeAll { ids.contains($0.id) }
+    var upcomingTrips: [Trip] {
+        trips
+            .filter { $0.endDate >= Calendar.current.startOfDay(for: Date()) }
+            .sorted { $0.startDate < $1.startDate }
     }
-    func update(_ trip: Trip) { if let i = trips.firstIndex(where: { $0.id == trip.id }) { trips[i] = trip } }
-    func tripBinding(_ id: UUID) -> Binding<Trip>? {
+
+    var pastTrips: [Trip] {
+        trips
+            .filter { $0.endDate < Calendar.current.startOfDay(for: Date()) }
+            .sorted { $0.endDate > $1.endDate }
+    }
+
+    func add(_ trip: Trip) {
+        trips.append(trip)
+    }
+
+    func update(_ trip: Trip) {
+        guard let index = trips.firstIndex(where: { $0.id == trip.id }) else { return }
+        trips[index] = trip
+    }
+
+    func delete(_ trip: Trip) {
+        trips.removeAll { $0.id == trip.id }
+    }
+
+    func binding(for id: UUID) -> Binding<Trip>? {
         guard let index = trips.firstIndex(where: { $0.id == id }) else { return nil }
-        return Binding(get: { self.trips[index] }, set: { self.trips[index] = $0 })
+        return Binding(
+            get: { self.trips[index] },
+            set: { self.trips[index] = $0 }
+        )
     }
 
-    private func save() {
-        guard !isLoading else { return }
-        do {
-            let data = try JSONEncoder.travel.encode(trips)
-            try data.write(to: fileURL, options: .atomic)
-        } catch { print("Save error: \(error)") }
+    private func saveLocal() {
+        guard let data = try? JSONEncoder.tripWallet.encode(trips) else { return }
+        try? data.write(to: localURL, options: .atomic)
     }
-    private func load() {
-        guard let data = try? Data(contentsOf: fileURL), let decoded = try? JSONDecoder.travel.decode([Trip].self, from: data) else { return }
+
+    private func loadLocal() {
+        guard
+            let data = try? Data(contentsOf: localURL),
+            let decoded = try? JSONDecoder.tripWallet.decode([Trip].self, from: data)
+        else { return }
         trips = decoded
     }
 
-    func exportData() throws -> URL {
-        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("TripWallet-Backup-\(ISO8601DateFormatter().string(from: Date()).prefix(10)).travelwallet")
-        try JSONEncoder.travel.encode(trips).write(to: temp, options: .atomic)
-        return temp
+    private func saveProfile() {
+        guard let data = try? JSONEncoder().encode(profile) else { return }
+        try? data.write(to: profileURL, options: .atomic)
     }
-    func importData(from url: URL) throws {
-        let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
-        let decoded = try JSONDecoder.travel.decode([Trip].self, from: Data(contentsOf: url))
-        trips = decoded
+
+    private func loadProfile() {
+        guard
+            let data = try? Data(contentsOf: profileURL),
+            let decoded = try? JSONDecoder().decode(UserProfile.self, from: data)
+        else { return }
+        profile = decoded
     }
-    func saveToICloud() throws -> URL {
-        guard let ubiquity = FileManager.default.url(forUbiquityContainerIdentifier: nil) else { throw BackupError.iCloudUnavailable }
-        let docs = ubiquity.appendingPathComponent("Documents", isDirectory: true)
-        try FileManager.default.createDirectory(at: docs, withIntermediateDirectories: true)
-        let target = docs.appendingPathComponent("TripWallet-Backup.travelwallet")
-        try JSONEncoder.travel.encode(trips).write(to: target, options: .atomic)
-        return target
+
+    private func iCloudURL() throws -> URL {
+        guard let container = FileManager.default.url(
+            forUbiquityContainerIdentifier: nil
+        ) else {
+            throw ICloudError.notAvailable
+        }
+
+        let documents = container.appendingPathComponent("Documents", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: documents,
+            withIntermediateDirectories: true
+        )
+        return documents.appendingPathComponent("TripWallet-iCloud.json")
     }
-    func restoreFromICloud() throws {
-        guard let ubiquity = FileManager.default.url(forUbiquityContainerIdentifier: nil) else { throw BackupError.iCloudUnavailable }
-        let target = ubiquity.appendingPathComponent("Documents/TripWallet-Backup.travelwallet")
-        trips = try JSONDecoder.travel.decode([Trip].self, from: Data(contentsOf: target))
+
+    func saveToICloud() async throws {
+        let url = try iCloudURL()
+        let payload = CloudPayload(updatedAt: Date(), trips: trips, profile: profile)
+        let data = try JSONEncoder.tripWallet.encode(payload)
+        try data.write(to: url, options: .atomic)
+    }
+
+    func restoreFromICloud() async throws {
+        let url = try iCloudURL()
+        let data = try Data(contentsOf: url)
+        let payload = try JSONDecoder.tripWallet.decode(CloudPayload.self, from: data)
+        trips = payload.trips
+        profile = payload.profile
+    }
+
+    private func restoreFromICloudIfNewer() async throws {
+        let url = try iCloudURL()
+        guard let data = try? Data(contentsOf: url) else { return }
+        let payload = try JSONDecoder.tripWallet.decode(CloudPayload.self, from: data)
+
+        let values = try? localURL.resourceValues(forKeys: [.contentModificationDateKey])
+        let localDate = values?.contentModificationDate ?? .distantPast
+
+        if payload.updatedAt > localDate {
+            trips = payload.trips
+            profile = payload.profile
+        }
     }
 }
 
-enum BackupError: LocalizedError { case iCloudUnavailable; var errorDescription: String? { "iCloud non è disponibile. Attiva iCloud Drive e configura il container dell’app in Xcode." } }
+private struct CloudPayload: Codable {
+    var updatedAt: Date
+    var trips: [Trip]
+    var profile: UserProfile
+}
 
-extension JSONEncoder { static var travel: JSONEncoder { let e=JSONEncoder(); e.dateEncodingStrategy = .iso8601; e.outputFormatting = [.prettyPrinted, .sortedKeys]; return e } }
-extension JSONDecoder { static var travel: JSONDecoder { let d=JSONDecoder(); d.dateDecodingStrategy = .iso8601; return d } }
+enum ICloudError: LocalizedError {
+    case notAvailable
+
+    var errorDescription: String? {
+        "iCloud non è disponibile. Accedi a iCloud sull’iPhone e attiva iCloud Drive."
+    }
+}
+
+extension JSONEncoder {
+    static var tripWallet: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+}
+
+extension JSONDecoder {
+    static var tripWallet: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+}

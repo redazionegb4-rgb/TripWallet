@@ -1,10 +1,15 @@
-TRAVEL WALLET – BUILD 1
+TRIPWALLET BUILD 2 – REDESIGN
 
-1. Apri TripWallet.xcodeproj con Xcode 15.
-2. Seleziona il target TripWallet > Signing & Capabilities.
-3. Scegli il tuo Team e cambia il Bundle Identifier se necessario.
-4. Per il backup iCloud automatico aggiungi la capability iCloud > iCloud Documents. L’esportazione/importazione manuale funziona già senza questa configurazione.
-5. Seleziona iPhone o simulatore e premi Run.
+- Nuova grafica moderna e colorata
+- Login/profilo iniziale locale
+- Creazione viaggio guidata con città, paese, date e foto copertina
+- Biglietti voli, hotel, treni ed eventi con foto QR o PDF
+- Itinerario, spese, valigia e luoghi
+- Solo backup iCloud
+- Solo iPhone e orientamento verticale
+- Xcode 15 / iOS 16+
 
-Compatibilità: iOS 16+, iPhone e iPad.
-Dati: salvati localmente in formato Codable; nessun server e nessuna registrazione.
+IMPORTANTE ICLOUD:
+In Xcode apri Target TripWallet > Signing & Capabilities.
+Verifica che sia presente iCloud con iCloud Documents.
+Se Xcode mostra un errore sul container, premi + Capability > iCloud e seleziona/crea il container legato al Bundle Identifier.

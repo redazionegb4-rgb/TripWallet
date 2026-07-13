@@ -2,186 +2,116 @@ import SwiftUI
 
 struct ItemsView: View {
     @Binding var trip: Trip
-    @State private var editingItem: TravelItem?
-    @State private var showNewItem = false
-
-    private var groupedItems: [Date: [TravelItem]] {
-        Dictionary(grouping: trip.items.sorted { $0.date < $1.date }) {
-            Calendar.current.startOfDay(for: $0.date)
-        }
-    }
+    @State private var showAdd = false
 
     var body: some View {
         List {
             if trip.items.isEmpty {
-                EmptyStateView(
-                    title: "Itinerario vuoto",
+                ModernEmptyRow(
                     icon: "calendar.badge.plus",
-                    message: "Aggiungi voli, alloggi, trasporti e attività."
+                    text: "Aggiungi volo, hotel o attività"
                 )
+                .listRowBackground(Color.clear)
             }
 
-            ForEach(groupedItems.keys.sorted(), id: \.self) { day in
-                Section(day.formatted(date: .complete, time: .omitted)) {
-                    ForEach(groupedItems[day] ?? []) { item in
-                        Button {
-                            editingItem = item
-                        } label: {
-                            HStack {
-                                Image(systemName: item.type.icon)
-                                    .foregroundStyle(.blue)
-                                    .frame(width: 28)
+            ForEach(trip.items.sorted { $0.date < $1.date }) { item in
+                HStack(spacing: 14) {
+                    Image(systemName: item.type.icon)
+                        .frame(width: 42, height: 42)
+                        .background(AppPalette.gradient)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 13))
 
-                                VStack(alignment: .leading) {
-                                    Text(item.title)
-                                        .foregroundStyle(.primary)
-
-                                    Text(item.date.formatted(date: .omitted, time: .shortened) + (item.location.isEmpty ? "" : " • " + item.location))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                if item.notify {
-                                    Image(systemName: "bell.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                        }
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                delete(item)
-                            } label: {
-                                Label("Elimina", systemImage: "trash")
-                            }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.title)
+                            .font(.headline)
+                        Text(item.date.formatted(date: .abbreviated, time: .shortened))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if !item.bookingCode.isEmpty {
+                            Text("Codice: \(item.bookingCode)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppPalette.purple)
                         }
                     }
                 }
             }
+            .onDelete { offsets in
+                let sorted = trip.items.sorted { $0.date < $1.date }
+                let ids = offsets.map { sorted[$0].id }
+                trip.items.removeAll { ids.contains($0.id) }
+            }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Itinerario")
         .toolbar {
             Button {
-                showNewItem = true
+                showAdd = true
             } label: {
-                Image(systemName: "plus")
+                Image(systemName: "plus.circle.fill")
             }
         }
-        .sheet(isPresented: $showNewItem) {
-            NavigationStack {
-                ItemEditor { item in
-                    add(item)
-                }
-            }
+        .sheet(isPresented: $showAdd) {
+            AddItemView(trip: $trip)
         }
-        .sheet(item: $editingItem) { item in
-            NavigationStack {
-                ItemEditor(existing: item) { updatedItem in
-                    update(updatedItem)
-                }
-            }
-        }
-    }
-
-    private func add(_ item: TravelItem) {
-        trip.items.append(item)
-        NotificationManager.shared.schedule(for: item, tripTitle: trip.title)
-    }
-
-    private func update(_ item: TravelItem) {
-        if let index = trip.items.firstIndex(where: { $0.id == item.id }) {
-            trip.items[index] = item
-        }
-        NotificationManager.shared.cancel(item.id)
-        NotificationManager.shared.schedule(for: item, tripTitle: trip.title)
-    }
-
-    private func delete(_ item: TravelItem) {
-        trip.items.removeAll { $0.id == item.id }
-        NotificationManager.shared.cancel(item.id)
     }
 }
 
-struct ItemEditor: View {
+private struct AddItemView: View {
+    @Binding var trip: Trip
     @Environment(\.dismiss) private var dismiss
-
-    var existing: TravelItem?
-    var onSave: (TravelItem) -> Void
 
     @State private var type: TravelItemType = .flight
     @State private var title = ""
     @State private var subtitle = ""
     @State private var date = Date()
     @State private var location = ""
-    @State private var code = ""
-    @State private var notes = ""
-    @State private var notify = false
+    @State private var bookingCode = ""
+    @State private var notify = true
 
     var body: some View {
-        Form {
-            Section("Tipo") {
+        NavigationStack {
+            Form {
                 Picker("Tipo", selection: $type) {
-                    ForEach(TravelItemType.allCases) { itemType in
-                        Label(itemType.rawValue, systemImage: itemType.icon)
-                            .tag(itemType)
+                    ForEach(TravelItemType.allCases) { type in
+                        Label(type.rawValue, systemImage: type.icon)
+                            .tag(type)
+                    }
+                }
+
+                TextField("Titolo", text: $title)
+                TextField("Compagnia o struttura", text: $subtitle)
+                DatePicker("Data e ora", selection: $date)
+                TextField("Luogo / aeroporto", text: $location)
+                TextField("Codice prenotazione", text: $bookingCode)
+                Toggle("Ricordami 2 ore prima", isOn: $notify)
+            }
+            .navigationTitle("Aggiungi")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annulla") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Salva") {
+                        let item = TravelItem(
+                            type: type,
+                            title: title.isEmpty ? type.rawValue : title,
+                            subtitle: subtitle,
+                            date: date,
+                            location: location,
+                            bookingCode: bookingCode,
+                            notify: notify
+                        )
+                        trip.items.append(item)
+                        NotificationManager.shared.schedule(
+                            for: item,
+                            tripTitle: trip.title
+                        )
+                        dismiss()
                     }
                 }
             }
-
-            Section("Dettagli") {
-                TextField("Titolo", text: $title)
-                TextField("Informazioni", text: $subtitle)
-                DatePicker("Data e ora", selection: $date)
-                TextField("Luogo / Terminal", text: $location)
-                TextField("Codice prenotazione", text: $code)
-            }
-
-            Section {
-                Toggle("Promemoria 2 ore prima", isOn: $notify)
-            }
-
-            Section("Note") {
-                TextEditor(text: $notes)
-                    .frame(minHeight: 80)
-            }
-        }
-        .navigationTitle(existing == nil ? "Nuovo elemento" : "Modifica")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Annulla") {
-                    dismiss()
-                }
-            }
-
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Salva") {
-                    var item = existing ?? TravelItem(type: type, title: title, date: date)
-                    item.type = type
-                    item.title = title
-                    item.subtitle = subtitle
-                    item.date = date
-                    item.location = location
-                    item.bookingCode = code
-                    item.notes = notes
-                    item.notify = notify
-                    onSave(item)
-                    dismiss()
-                }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-        .onAppear {
-            guard let item = existing else { return }
-            type = item.type
-            title = item.title
-            subtitle = item.subtitle
-            date = item.date
-            location = item.location
-            code = item.bookingCode
-            notes = item.notes
-            notify = item.notify
         }
     }
 }

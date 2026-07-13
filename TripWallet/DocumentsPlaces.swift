@@ -1,181 +1,253 @@
 import SwiftUI
+import PhotosUI
 import UniformTypeIdentifiers
 
 struct DocumentsView: View {
     @Binding var trip: Trip
-    @State private var showEditor = false
-    @State private var documentToImport: TravelDocument?
+    @State private var showAdd = false
+    @State private var selectedDocument: TravelDocument?
 
     var body: some View {
-        List {
-            if trip.documents.isEmpty {
-                EmptyStateView(
-                    title: "Nessun documento",
-                    icon: "doc.badge.plus",
-                    message: "Salva passaporti, assicurazioni, biglietti e PDF."
-                )
-            }
-
-            ForEach(trip.documents) { document in
-                HStack {
-                    Image(systemName: document.fileName == nil ? "doc.text.fill" : "doc.richtext.fill")
-                        .foregroundStyle(.blue)
-
-                    VStack(alignment: .leading) {
-                        Text(document.title)
-                        Text(documentSubtitle(document))
-                            .font(.caption)
+        ScrollView {
+            LazyVStack(spacing: 14) {
+                if trip.documents.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.system(size: 58))
+                            .foregroundStyle(AppPalette.purple)
+                        Text("Biglietti e QR")
+                            .font(.title2.bold())
+                        Text("Salva carte d’imbarco, voucher hotel, PDF e immagini con QR code.")
                             .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
                     }
+                    .padding(30)
+                }
 
-                    Spacer()
-
+                ForEach(trip.documents) { document in
                     Button {
-                        documentToImport = document
+                        selectedDocument = document
                     } label: {
-                        Image(systemName: "paperclip")
+                        DocumentCard(document: document)
                     }
-                    .buttonStyle(.borderless)
-                }
-                .swipeActions {
-                    Button(role: .destructive) {
-                        trip.documents.removeAll { $0.id == document.id }
-                    } label: {
-                        Label("Elimina", systemImage: "trash")
-                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(20)
         }
-        .navigationTitle("Documenti")
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("Biglietti e documenti")
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showEditor = true
-                } label: {
-                    Image(systemName: "plus")
-                }
+            Button {
+                showAdd = true
+            } label: {
+                Image(systemName: "plus.circle.fill")
             }
         }
-        .sheet(isPresented: $showEditor) {
-            NavigationStack {
-                DocumentEditor { newDocument in
-                    trip.documents.append(newDocument)
-                }
-            }
+        .sheet(isPresented: $showAdd) {
+            AddDocumentView(trip: $trip)
         }
-        .fileImporter(
-            isPresented: Binding(
-                get: { documentToImport != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        documentToImport = nil
-                    }
-                }
-            ),
-            allowedContentTypes: [.pdf, .image, .data]
-        ) { result in
-            handleImport(result)
+        .sheet(item: $selectedDocument) { document in
+            DocumentPreview(document: document)
         }
-    }
-
-    private func documentSubtitle(_ document: TravelDocument) -> String {
-        guard let fileName = document.fileName else {
-            return document.type
-        }
-        return "\(document.type) • \(fileName)"
-    }
-
-    private func handleImport(_ result: Result<URL, Error>) {
-        defer { documentToImport = nil }
-
-        guard
-            case .success(let url) = result,
-            let selectedDocument = documentToImport,
-            let index = trip.documents.firstIndex(where: { $0.id == selectedDocument.id })
-        else {
-            return
-        }
-
-        let hasAccess = url.startAccessingSecurityScopedResource()
-        defer {
-            if hasAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        trip.documents[index].fileName = url.lastPathComponent
-        trip.documents[index].bookmarkData = try? url.bookmarkData(
-            options: .minimalBookmark,
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
     }
 }
 
-struct DocumentEditor: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let save: (TravelDocument) -> Void
-
-    @State private var title = ""
-    @State private var type = "Biglietto"
-    @State private var hasExpiry = false
-    @State private var expiry = Date()
-    @State private var notes = ""
-
-    private let types = [
-        "Passaporto",
-        "Carta d’identità",
-        "Biglietto",
-        "Assicurazione",
-        "Prenotazione",
-        "Altro"
-    ]
+private struct DocumentCard: View {
+    let document: TravelDocument
 
     var body: some View {
-        Form {
-            TextField("Titolo", text: $title)
+        HStack(spacing: 15) {
+            ZStack {
+                AppPalette.warmGradient
+                Image(systemName: document.kind.icon)
+                    .font(.title2)
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 56, height: 56)
+            .clipShape(RoundedRectangle(cornerRadius: 17))
 
-            Picker("Tipo", selection: $type) {
-                ForEach(types, id: \.self) { item in
-                    Text(item)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(document.title)
+                    .font(.headline)
+                Text(document.kind.rawValue)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                if !document.bookingCode.isEmpty {
+                    Text("Codice: \(document.bookingCode)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppPalette.purple)
                 }
             }
 
-            Toggle("Ha una scadenza", isOn: $hasExpiry)
+            Spacer()
 
-            if hasExpiry {
-                DatePicker(
-                    "Scadenza",
-                    selection: $expiry,
-                    displayedComponents: .date
-                )
+            if document.imageData != nil {
+                Image(systemName: "qrcode")
+                    .foregroundStyle(AppPalette.purple)
+            } else if document.fileData != nil {
+                Image(systemName: "doc.richtext.fill")
+                    .foregroundStyle(AppPalette.blue)
             }
-
-            TextEditor(text: $notes)
-                .frame(minHeight: 80)
         }
-        .navigationTitle("Nuovo documento")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Annulla") {
-                    dismiss()
+        .padding()
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+    }
+}
+
+private struct AddDocumentView: View {
+    @Binding var trip: Trip
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var title = ""
+    @State private var kind: DocumentKind = .flight
+    @State private var bookingCode = ""
+    @State private var notes = ""
+    @State private var imageItem: PhotosPickerItem?
+    @State private var imageData: Data?
+    @State private var fileName: String?
+    @State private var fileData: Data?
+    @State private var showFileImporter = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Dettagli") {
+                    TextField("Titolo", text: $title)
+
+                    Picker("Tipo", selection: $kind) {
+                        ForEach(DocumentKind.allCases) { kind in
+                            Label(kind.rawValue, systemImage: kind.icon)
+                                .tag(kind)
+                        }
+                    }
+
+                    TextField("Codice prenotazione", text: $bookingCode)
+                    TextField("Note", text: $notes, axis: .vertical)
+                }
+
+                Section("Biglietto o QR code") {
+                    PhotosPicker(selection: $imageItem, matching: .images) {
+                        Label(
+                            imageData == nil ? "Scegli foto o QR" : "Foto selezionata",
+                            systemImage: "photo.on.rectangle"
+                        )
+                    }
+                    .onChange(of: imageItem) { newValue in
+                        Task {
+                            imageData = try? await newValue?.loadTransferable(type: Data.self)
+                        }
+                    }
+
+                    Button {
+                        showFileImporter = true
+                    } label: {
+                        Label(
+                            fileName == nil ? "Importa PDF o file" : fileName ?? "File selezionato",
+                            systemImage: "doc.badge.plus"
+                        )
+                    }
+                }
+
+                if
+                    let imageData,
+                    let image = UIImage(data: imageData)
+                {
+                    Section("Anteprima") {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 320)
+                    }
                 }
             }
-
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Salva") {
-                    save(
-                        TravelDocument(
-                            title: title,
-                            type: type,
-                            expiryDate: hasExpiry ? expiry : nil,
-                            notes: notes
-                        )
-                    )
-                    dismiss()
+            .navigationTitle("Nuovo biglietto")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annulla") { dismiss() }
                 }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Salva") {
+                        trip.documents.append(
+                            TravelDocument(
+                                title: title.isEmpty ? kind.rawValue : title,
+                                kind: kind,
+                                bookingCode: bookingCode,
+                                imageData: imageData,
+                                fileName: fileName,
+                                fileData: fileData,
+                                notes: notes
+                            )
+                        )
+                        dismiss()
+                    }
+                }
+            }
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [.pdf, .image],
+                allowsMultipleSelection: false
+            ) { result in
+                guard
+                    case .success(let urls) = result,
+                    let url = urls.first
+                else { return }
+
+                let access = url.startAccessingSecurityScopedResource()
+                defer {
+                    if access { url.stopAccessingSecurityScopedResource() }
+                }
+
+                fileName = url.lastPathComponent
+                fileData = try? Data(contentsOf: url)
+            }
+        }
+    }
+}
+
+private struct DocumentPreview: View {
+    let document: TravelDocument
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    if
+                        let data = document.imageData,
+                        let image = UIImage(data: data)
+                    {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                    } else {
+                        Image(systemName: document.kind.icon)
+                            .font(.system(size: 80))
+                            .foregroundStyle(AppPalette.purple)
+                            .padding(40)
+                    }
+
+                    VStack(spacing: 8) {
+                        Text(document.title)
+                            .font(.title.bold())
+                        Text(document.kind.rawValue)
+                            .foregroundStyle(.secondary)
+                        if !document.bookingCode.isEmpty {
+                            Text(document.bookingCode)
+                                .font(.title3.monospaced().bold())
+                                .padding()
+                                .background(AppPalette.purple.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            .navigationTitle("Anteprima")
+            .toolbar {
+                Button("Chiudi") { dismiss() }
             }
         }
     }
@@ -183,123 +255,38 @@ struct DocumentEditor: View {
 
 struct PlacesView: View {
     @Binding var trip: Trip
-    @State private var showEditor = false
+    @State private var name = ""
+    @State private var address = ""
 
     var body: some View {
         List {
-            if trip.places.isEmpty {
-                EmptyStateView(
-                    title: "Nessun luogo",
-                    icon: "mappin.slash",
-                    message: "Salva ristoranti, spiagge, musei e altri posti."
-                )
+            Section("Nuovo luogo") {
+                TextField("Nome", text: $name)
+                TextField("Indirizzo", text: $address)
+                Button("Aggiungi") {
+                    guard !name.isEmpty else { return }
+                    trip.places.append(
+                        SavedPlace(
+                            name: name,
+                            address: address,
+                            category: "Luogo"
+                        )
+                    )
+                    name = ""
+                    address = ""
+                }
             }
 
             ForEach(trip.places) { place in
                 VStack(alignment: .leading) {
                     Text(place.name)
                         .font(.headline)
-
-                    Text(placeSubtitle(place))
-                        .font(.caption)
+                    Text(place.address)
                         .foregroundStyle(.secondary)
-
-                    if !place.notes.isEmpty {
-                        Text(place.notes)
-                            .font(.subheadline)
-                    }
-                }
-                .swipeActions {
-                    Button(role: .destructive) {
-                        trip.places.removeAll { $0.id == place.id }
-                    } label: {
-                        Label("Elimina", systemImage: "trash")
-                    }
                 }
             }
+            .onDelete { trip.places.remove(atOffsets: $0) }
         }
-        .navigationTitle("Luoghi")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showEditor = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-        }
-        .sheet(isPresented: $showEditor) {
-            NavigationStack {
-                PlaceEditor { newPlace in
-                    trip.places.append(newPlace)
-                }
-            }
-        }
-    }
-
-    private func placeSubtitle(_ place: SavedPlace) -> String {
-        guard !place.address.isEmpty else {
-            return place.category
-        }
-        return "\(place.category) • \(place.address)"
-    }
-}
-
-struct PlaceEditor: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let save: (SavedPlace) -> Void
-
-    @State private var name = ""
-    @State private var address = ""
-    @State private var category = "Da visitare"
-    @State private var notes = ""
-
-    private let categories = [
-        "Da visitare",
-        "Ristorante",
-        "Spiaggia",
-        "Museo",
-        "Shopping",
-        "Altro"
-    ]
-
-    var body: some View {
-        Form {
-            TextField("Nome", text: $name)
-            TextField("Indirizzo", text: $address)
-
-            Picker("Categoria", selection: $category) {
-                ForEach(categories, id: \.self) { item in
-                    Text(item)
-                }
-            }
-
-            TextEditor(text: $notes)
-                .frame(minHeight: 80)
-        }
-        .navigationTitle("Nuovo luogo")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Annulla") {
-                    dismiss()
-                }
-            }
-
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Salva") {
-                    save(
-                        SavedPlace(
-                            name: name,
-                            address: address,
-                            category: category,
-                            notes: notes
-                        )
-                    )
-                    dismiss()
-                }
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
+        .navigationTitle("Luoghi salvati")
     }
 }
