@@ -7,11 +7,12 @@ struct TripsView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
+            LazyVStack(spacing: 15) {
                 if store.trips.isEmpty {
-                    ModernEmptyRow(
+                    EmptyInfoCard(
                         icon: "airplane.departure",
-                        text: "Non hai ancora creato viaggi"
+                        title: "Nessun viaggio",
+                        subtitle: "Tocca + per creare il primo."
                     )
                 } else {
                     ForEach(store.upcomingTrips) { trip in
@@ -34,7 +35,7 @@ struct TripsView: View {
                     showNewTrip = true
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(AppPalette.purple)
+                        .foregroundStyle(AppTheme.violet)
                 }
             }
         }
@@ -50,28 +51,25 @@ private struct TripListCard: View {
     var body: some View {
         HStack(spacing: 15) {
             Group {
-                if
-                    let data = trip.coverImageData,
-                    let image = UIImage(data: data)
-                {
+                if let data = trip.coverImage, let image = UIImage(data: data) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
                 } else {
-                    AppPalette.gradient
+                    AppTheme.primaryGradient
                 }
             }
-            .frame(width: 92, height: 92)
-            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .frame(width: 94, height: 94)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("\(flagEmoji(countryCode: trip.countryCode)) \(trip.city)")
+            VStack(alignment: .leading, spacing: 5) {
+                Text("\(flagEmoji(for: trip.countryCode)) \(trip.city)")
                     .font(.title3.bold())
-                Text(trip.country)
+                Text(trip.countryName)
                     .foregroundStyle(.secondary)
                 Text(trip.startDate.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppPalette.purple)
+                    .foregroundStyle(AppTheme.violet)
             }
 
             Spacer()
@@ -81,8 +79,7 @@ private struct TripListCard: View {
         }
         .padding()
         .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 26))
-        .shadow(color: .black.opacity(0.05), radius: 12, y: 6)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
     }
 }
 
@@ -93,61 +90,56 @@ struct NewTripWizard: View {
     @State private var step = 0
     @State private var title = ""
     @State private var city = ""
-    @State private var country = ""
-    @State private var countryCode = "IT"
+    @State private var selectedCountry = CountryOption.common[1]
     @State private var startDate = Date()
-    @State private var endDate = Calendar.current.date(byAdding: .day, value: 4, to: Date()) ?? Date()
+    @State private var endDate = Calendar.current.date(byAdding: .day, value: 5, to: Date()) ?? Date()
     @State private var notes = ""
-    @State private var coverItem: PhotosPickerItem?
+    @State private var photoItem: PhotosPickerItem?
     @State private var coverData: Data?
-    @State private var createdTripID: UUID?
+    @State private var createdID: UUID?
 
-    private var canGoNext: Bool {
-        switch step {
-        case 0:
-            return !city.trimmingCharacters(in: .whitespaces).isEmpty &&
-                   !country.trimmingCharacters(in: .whitespaces).isEmpty
-        default:
-            return true
-        }
+    private var canContinue: Bool {
+        step != 0 || !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                progress
+                progressBar
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
-                        if step == 0 {
+                        switch step {
+                        case 0:
                             destinationStep
-                        } else if step == 1 {
+                        case 1:
                             coverStep
-                        } else {
-                            completedStep
+                        default:
+                            completionStep
                         }
                     }
                     .padding(22)
                 }
+                .scrollDismissesKeyboard(.interactively)
 
-                footer
+                bottomBar
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle(step == 0 ? "Nuovo viaggio" : step == 1 ? "Copertina" : "Organizza")
+            .navigationTitle(step == 0 ? "Destinazione" : step == 1 ? "Copertina" : "Pronto")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Chiudi") { dismiss() }
                 }
             }
         }
     }
 
-    private var progress: some View {
+    private var progressBar: some View {
         HStack(spacing: 8) {
             ForEach(0..<3, id: \.self) { index in
                 Capsule()
-                    .fill(index <= step ? AppPalette.purple : Color.secondary.opacity(0.2))
+                    .fill(index <= step ? AppTheme.violet : Color.secondary.opacity(0.2))
                     .frame(height: 6)
             }
         }
@@ -160,22 +152,39 @@ struct NewTripWizard: View {
             Text("Dove vuoi andare?")
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
 
-            Group {
-                TextField("Nome del viaggio, es. Estate 2026", text: $title)
-                TextField("Città, es. Tenerife", text: $city)
-                TextField("Paese, es. Spagna", text: $country)
-                TextField("Codice paese, es. ES", text: $countryCode)
-                    .textInputAutocapitalization(.characters)
+            StyledTextField(title: "Nome viaggio, es. Estate 2026", text: $title)
+            StyledTextField(title: "Città, es. Tenerife", text: $city)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Paese")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Picker("Paese", selection: $selectedCountry) {
+                    ForEach(CountryOption.common) { country in
+                        Text("\(flagEmoji(for: country.code)) \(country.name)")
+                            .tag(country)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 17))
             }
-            .padding(16)
-            .background(.background)
-            .clipShape(RoundedRectangle(cornerRadius: 17))
 
             DatePicker("Partenza", selection: $startDate, displayedComponents: .date)
+                .padding(16)
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 17))
+
             DatePicker("Ritorno", selection: $endDate, in: startDate..., displayedComponents: .date)
+                .padding(16)
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 17))
 
             TextField("Note facoltative", text: $notes, axis: .vertical)
-                .lineLimit(3...6)
+                .lineLimit(3...5)
                 .padding(16)
                 .background(.background)
                 .clipShape(RoundedRectangle(cornerRadius: 17))
@@ -184,83 +193,93 @@ struct NewTripWizard: View {
 
     private var coverStep: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Rendi unico il viaggio")
+            Text("Scegli la foto")
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
 
-            Text("Scegli una foto della città: sarà visibile nella Home e nella scheda viaggio.")
+            Text("La città sarà sempre visibile sopra la foto, insieme al Paese e alle date.")
                 .foregroundStyle(.secondary)
 
-            PhotosPicker(selection: $coverItem, matching: .images) {
-                ZStack {
-                    if
-                        let coverData,
-                        let image = UIImage(data: coverData)
-                    {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        AppPalette.warmGradient
-                        VStack(spacing: 12) {
-                            Image(systemName: "photo.badge.plus")
-                                .font(.system(size: 44))
-                            Text("Scegli foto copertina")
-                                .font(.headline)
+            PhotosPicker(selection: $photoItem, matching: .images) {
+                ZStack(alignment: .bottomLeading) {
+                    Group {
+                        if let coverData, let image = UIImage(data: coverData) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            AppTheme.sunsetGradient
                         }
-                        .foregroundStyle(.white)
                     }
+                    .frame(height: 270)
+                    .clipped()
+
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.72)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("\(flagEmoji(for: selectedCountry.code)) \(city)")
+                            .font(.system(size: 32, weight: .heavy, design: .rounded))
+                        Text(selectedCountry.name)
+                            .font(.headline)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(20)
                 }
-                .frame(height: 260)
-                .clipShape(RoundedRectangle(cornerRadius: 28))
+                .clipShape(RoundedRectangle(cornerRadius: 26))
             }
-            .onChange(of: coverItem) { newValue in
+            .onChange(of: photoItem) { item in
                 Task {
-                    coverData = try? await newValue?.loadTransferable(type: Data.self)
+                    coverData = try? await item?.loadTransferable(type: Data.self)
                 }
             }
+
+            Text("Tocca la copertina per scegliere una foto dalla libreria.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
-    private var completedStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
+    private var completionStep: some View {
+        VStack(spacing: 20) {
             ZStack {
-                AppPalette.gradient
+                AppTheme.primaryGradient
                 VStack(spacing: 14) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 58))
                     Text("Viaggio creato")
                         .font(.title.bold())
-                    Text("Ora inserisci voli, hotel, QR, documenti e tutto ciò che serve.")
+                    Text("Adesso completa voli, hotel, biglietti, QR code, valigia e luoghi.")
                         .multilineTextAlignment(.center)
                 }
                 .foregroundStyle(.white)
-                .padding(30)
+                .padding(28)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 28))
+            .clipShape(RoundedRectangle(cornerRadius: 26))
 
-            if let createdTripID {
+            if let createdID {
                 NavigationLink {
-                    TripDetailView(tripID: createdTripID)
+                    TripDetailView(tripID: createdID)
                 } label: {
                     Label("Completa il viaggio", systemImage: "arrow.right.circle.fill")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .background(AppPalette.warmGradient)
+                        .padding(.vertical, 16)
+                        .background(AppTheme.sunsetGradient)
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 19))
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
         }
     }
 
-    private var footer: some View {
+    private var bottomBar: some View {
         HStack(spacing: 12) {
-            if step > 0 && step < 2 {
-                Button("Indietro") {
-                    step -= 1
-                }
-                .buttonStyle(.bordered)
+            if step == 1 {
+                Button("Indietro") { step = 0 }
+                    .buttonStyle(.bordered)
             }
 
             Button {
@@ -269,16 +288,16 @@ struct NewTripWizard: View {
                 } else if step == 1 {
                     let trip = Trip(
                         title: title.isEmpty ? "\(city) \(Calendar.current.component(.year, from: startDate))" : title,
-                        city: city,
-                        country: country,
-                        countryCode: countryCode,
+                        city: city.trimmingCharacters(in: .whitespacesAndNewlines),
+                        countryName: selectedCountry.name,
+                        countryCode: selectedCountry.code,
                         startDate: startDate,
                         endDate: endDate,
-                        notes: notes,
-                        coverImageData: coverData
+                        coverImage: coverData,
+                        notes: notes
                     )
-                    store.add(trip)
-                    createdTripID = trip.id
+                    store.addTrip(trip)
+                    createdID = trip.id
                     step = 2
                 } else {
                     dismiss()
@@ -288,13 +307,25 @@ struct NewTripWizard: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(canGoNext ? AnyShapeStyle(AppPalette.gradient) : AnyShapeStyle(Color.gray.opacity(0.3)))
+                    .background(canContinue ? AnyShapeStyle(AppTheme.primaryGradient) : AnyShapeStyle(Color.gray.opacity(0.3)))
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
             }
-            .disabled(!canGoNext)
+            .disabled(!canContinue)
         }
         .padding(18)
         .background(.ultraThinMaterial)
+    }
+}
+
+private struct StyledTextField: View {
+    let title: String
+    @Binding var text: String
+
+    var body: some View {
+        TextField(title, text: $text)
+            .padding(16)
+            .background(.background)
+            .clipShape(RoundedRectangle(cornerRadius: 17))
     }
 }

@@ -17,84 +17,79 @@ struct HomeView: View {
                     NavigationLink {
                         TripDetailView(tripID: trip.id)
                     } label: {
-                        HeroTripCard(trip: trip)
+                        DestinationCard(trip: trip)
                     }
                     .buttonStyle(.plain)
+
+                    Text("Riepilogo")
+                        .font(.title2.bold())
+
+                    HStack(spacing: 12) {
+                        SummaryTile(
+                            icon: "calendar",
+                            value: "\(trip.duration)",
+                            label: "giorni",
+                            tint: AppTheme.violet
+                        )
+                        SummaryTile(
+                            icon: "ticket.fill",
+                            value: "\(trip.tickets.count)",
+                            label: "biglietti",
+                            tint: AppTheme.coral
+                        )
+                        SummaryTile(
+                            icon: "suitcase.fill",
+                            value: "\(trip.packedCount)/\(trip.packing.count)",
+                            label: "valigia",
+                            tint: AppTheme.blue
+                        )
+                    }
+
+                    Text("Prossimi impegni")
+                        .font(.title2.bold())
+
+                    let futureBookings = trip.bookings
+                        .filter { $0.startDate >= Date() }
+                        .sorted { $0.startDate < $1.startDate }
+                        .prefix(3)
+
+                    if futureBookings.isEmpty {
+                        EmptyInfoCard(
+                            icon: "calendar.badge.plus",
+                            title: "Nessun impegno",
+                            subtitle: "Aggiungi voli, hotel o attività dal viaggio."
+                        )
+                    } else {
+                        ForEach(Array(futureBookings)) { booking in
+                            BookingRow(booking: booking)
+                        }
+                    }
                 } else {
                     Button {
                         showNewTrip = true
                     } label: {
-                        EmptyHeroCard()
+                        NewTripEmptyCard()
                     }
                     .buttonStyle(.plain)
                 }
-
-                if let trip = nextTrip {
-                    Text("Il tuo viaggio")
-                        .font(.title2.bold())
-
-                    quickStats(trip)
-
-                    Text("Prossimi appuntamenti")
-                        .font(.title2.bold())
-
-                    let futureItems = trip.items
-                        .filter { $0.date >= Date() }
-                        .sorted { $0.date < $1.date }
-                        .prefix(3)
-
-                    if futureItems.isEmpty {
-                        ModernEmptyRow(
-                            icon: "calendar.badge.plus",
-                            text: "Aggiungi voli, hotel o attività"
-                        )
-                    } else {
-                        ForEach(Array(futureItems)) { item in
-                            HStack(spacing: 14) {
-                                Image(systemName: item.type.icon)
-                                    .font(.title3)
-                                    .frame(width: 44, height: 44)
-                                    .background(AppPalette.gradient)
-                                    .foregroundStyle(.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(item.title)
-                                        .font(.headline)
-                                    Text(item.date.formatted(
-                                        date: .abbreviated,
-                                        time: .shortened
-                                    ))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-                            }
-                            .padding()
-                            .background(.background)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .shadow(color: .black.opacity(0.06), radius: 14, y: 7)
-                        }
-                    }
-                }
             }
             .padding(.horizontal, 20)
+            .padding(.top, 16)
             .padding(.bottom, 30)
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationBarHidden(true)
         .sheet(isPresented: $showNewTrip) {
             NewTripWizard()
         }
     }
 
     private var header: some View {
-        HStack {
+        HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 5) {
-                Text("Ciao, \(store.profile.name)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppPalette.purple)
+                Text("Ciao, \(store.account.fullName.components(separatedBy: " ").first ?? store.account.fullName)")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.violet)
 
                 Text("Dove si parte?")
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
@@ -108,54 +103,27 @@ struct HomeView: View {
                 Image(systemName: "plus")
                     .font(.title2.bold())
                     .frame(width: 54, height: 54)
-                    .background(AppPalette.warmGradient)
+                    .background(AppTheme.sunsetGradient)
                     .foregroundStyle(.white)
                     .clipShape(Circle())
-                    .shadow(color: AppPalette.pink.opacity(0.3), radius: 12, y: 6)
+                    .shadow(color: AppTheme.coral.opacity(0.28), radius: 12, y: 6)
             }
-        }
-        .padding(.top, 12)
-    }
-
-    private func quickStats(_ trip: Trip) -> some View {
-        HStack(spacing: 12) {
-            MiniStat(
-                icon: "calendar",
-                value: "\(trip.daysCount)",
-                label: "giorni",
-                color: AppPalette.purple
-            )
-            MiniStat(
-                icon: "creditcard.fill",
-                value: trip.totalSpent.formatted(.currency(code: "EUR")),
-                label: "spesi",
-                color: AppPalette.blue
-            )
-            MiniStat(
-                icon: "ticket.fill",
-                value: "\(trip.documents.count)",
-                label: "biglietti",
-                color: AppPalette.pink
-            )
         }
     }
 }
 
-private struct HeroTripCard: View {
+struct DestinationCard: View {
     let trip: Trip
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             Group {
-                if
-                    let data = trip.coverImageData,
-                    let image = UIImage(data: data)
-                {
+                if let data = trip.coverImage, let image = UIImage(data: data) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
                 } else {
-                    AppPalette.warmGradient
+                    AppTheme.primaryGradient
                 }
             }
             .frame(height: 270)
@@ -167,65 +135,41 @@ private struct HeroTripCard: View {
                 endPoint: .bottom
             )
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(flagEmoji(countryCode: trip.countryCode))
+            VStack(alignment: .leading, spacing: 7) {
+                Text(flagEmoji(for: trip.countryCode))
                     .font(.largeTitle)
 
-                Text(trip.city.isEmpty ? trip.country : trip.city)
+                Text(trip.city)
                     .font(.system(size: 38, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
 
-                Text(trip.country)
+                Text(trip.countryName)
                     .font(.headline)
-                    .foregroundStyle(.white.opacity(0.86))
 
                 Text("\(trip.startDate.formatted(date: .abbreviated, time: .omitted)) – \(trip.endDate.formatted(date: .abbreviated, time: .omitted))")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
             }
-            .padding(24)
+            .foregroundStyle(.white)
+            .padding(22)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 30))
-        .shadow(color: AppPalette.purple.opacity(0.22), radius: 20, y: 10)
+        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .shadow(color: .black.opacity(0.13), radius: 16, y: 9)
     }
 }
 
-private struct EmptyHeroCard: View {
-    var body: some View {
-        ZStack {
-            AppPalette.gradient
-            VStack(spacing: 16) {
-                Image(systemName: "airplane.departure")
-                    .font(.system(size: 54))
-                    .foregroundStyle(.white)
-                Text("Crea il tuo primo viaggio")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-                Text("Aggiungi destinazione, copertina, voli, hotel e biglietti.")
-                    .foregroundStyle(.white.opacity(0.85))
-                    .multilineTextAlignment(.center)
-            }
-            .padding(28)
-        }
-        .frame(height: 250)
-        .clipShape(RoundedRectangle(cornerRadius: 30))
-    }
-}
-
-private struct MiniStat: View {
+private struct SummaryTile: View {
     let icon: String
     let value: String
     let label: String
-    let color: Color
+    let tint: Color
 
     var body: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 8) {
             Image(systemName: icon)
-                .foregroundStyle(color)
+                .foregroundStyle(tint)
             Text(value)
                 .font(.headline)
                 .lineLimit(1)
-                .minimumScaleFactor(0.65)
+                .minimumScaleFactor(0.7)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -237,16 +181,53 @@ private struct MiniStat: View {
     }
 }
 
-struct ModernEmptyRow: View {
-    let icon: String
-    let text: String
+private struct BookingRow: View {
+    let booking: Booking
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
+            Image(systemName: booking.type.symbol)
+                .font(.title3)
+                .frame(width: 46, height: 46)
+                .background(AppTheme.primaryGradient)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(booking.title)
+                    .font(.headline)
+                Text(booking.startDate.formatted(date: .abbreviated, time: .shortened))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+}
+
+struct EmptyInfoCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 14) {
             Image(systemName: icon)
-                .foregroundStyle(AppPalette.purple)
-            Text(text)
-                .foregroundStyle(.secondary)
+                .font(.title2)
+                .foregroundStyle(AppTheme.violet)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
             Spacer()
         }
         .padding(18)
@@ -255,11 +236,24 @@ struct ModernEmptyRow: View {
     }
 }
 
-func flagEmoji(countryCode: String) -> String {
-    let code = countryCode.uppercased()
-    guard code.count == 2 else { return "🌍" }
-    let scalars = code.unicodeScalars.compactMap {
-        UnicodeScalar(127397 + $0.value)
+private struct NewTripEmptyCard: View {
+    var body: some View {
+        ZStack {
+            AppTheme.primaryGradient
+
+            VStack(spacing: 16) {
+                Image(systemName: "airplane.departure")
+                    .font(.system(size: 52))
+                Text("Crea il tuo primo viaggio")
+                    .font(.title2.bold())
+                Text("Scegli destinazione, foto, date e poi aggiungi voli, hotel e biglietti.")
+                    .multilineTextAlignment(.center)
+                    .opacity(0.88)
+            }
+            .foregroundStyle(.white)
+            .padding(26)
+        }
+        .frame(height: 250)
+        .clipShape(RoundedRectangle(cornerRadius: 28))
     }
-    return String(String.UnicodeScalarView(scalars))
 }

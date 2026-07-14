@@ -1,45 +1,41 @@
 import Foundation
 import SwiftUI
+import CryptoKit
 
 @MainActor
 final class TravelStore: ObservableObject {
+    @Published var account = LocalAccount() {
+        didSet { saveAccount() }
+    }
+
     @Published var trips: [Trip] = [] {
         didSet {
             guard !isLoading else { return }
-            saveLocal()
-            Task { try? await saveToICloud() }
+            saveTrips()
         }
     }
 
-    @Published var profile: UserProfile = UserProfile() {
-        didSet { saveProfile() }
-    }
-
-    private let localURL: URL
-    private let profileURL: URL
     private var isLoading = true
+    private let accountURL: URL
+    private let tripsURL: URL
 
     init() {
-        let directory = FileManager.default.urls(
+        let base = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
-        )[0].appendingPathComponent("TripWallet", isDirectory: true)
+        )[0].appendingPathComponent("TripWalletClean", isDirectory: true)
 
         try? FileManager.default.createDirectory(
-            at: directory,
+            at: base,
             withIntermediateDirectories: true
         )
 
-        localURL = directory.appendingPathComponent("trips.json")
-        profileURL = directory.appendingPathComponent("profile.json")
+        accountURL = base.appendingPathComponent("account.json")
+        tripsURL = base.appendingPathComponent("trips.json")
 
-        loadLocal()
-        loadProfile()
+        loadAccount()
+        loadTrips()
         isLoading = false
-
-        Task {
-            try? await restoreFromICloudIfNewer()
-        }
     }
 
     var upcomingTrips: [Trip] {
@@ -54,109 +50,153 @@ final class TravelStore: ObservableObject {
             .sorted { $0.endDate > $1.endDate }
     }
 
-    func add(_ trip: Trip) {
+    func register(name: String, email: String, password: String) {
+        account = LocalAccount(
+            fullName: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+            passwordHash: hash(password),
+            isAuthenticated: true
+        )
+    }
+
+    func login(email: String, password: String) -> Bool {
+        let normalized = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard account.email == normalized, account.passwordHash == hash(password) else {
+            return false
+        }
+        account.isAuthenticated = true
+        return true
+    }
+
+    func logout() {
+        account.isAuthenticated = false
+    }
+
+    func addTrip(_ trip: Trip) {
         trips.append(trip)
     }
 
-    func update(_ trip: Trip) {
-        guard let index = trips.firstIndex(where: { $0.id == trip.id }) else { return }
-        trips[index] = trip
-    }
-
-    func delete(_ trip: Trip) {
+    func deleteTrip(_ trip: Trip) {
         trips.removeAll { $0.id == trip.id }
     }
 
-    func binding(for id: UUID) -> Binding<Trip>? {
-        guard let index = trips.firstIndex(where: { $0.id == id }) else { return nil }
+    func binding(for tripID: UUID) -> Binding<Trip>? {
+        guard let index = trips.firstIndex(where: { $0.id == tripID }) else { return nil }
         return Binding(
             get: { self.trips[index] },
             set: { self.trips[index] = $0 }
         )
     }
 
-    private func saveLocal() {
-        guard let data = try? JSONEncoder.tripWallet.encode(trips) else { return }
-        try? data.write(to: localURL, options: .atomic)
+    private func hash(_ value: String) -> String {
+        SHA256.hash(data: Data(value.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
-    private func loadLocal() {
+    private func saveAccount() {
+        guard let data = try? JSONEncoder().encode(account) else { return }
+        try? data.write(to: accountURL, options: .atomic)
+    }
+
+    private func saveTrips() {
+        guard let data = try? JSONEncoder.tripWallet.encode(trips) else { return }
+        try? data.write(to: tripsURL, options: .atomic)
+    }
+
+    private func loadAccount() {
         guard
-            let data = try? Data(contentsOf: localURL),
+            let data = try? Data(contentsOf: accountURL),
+            let decoded = try? JSONDecoder().decode(LocalAccount.self, from: data)
+        else { return }
+        account = decoded
+    }
+
+    private func loadTrips() {
+        guard
+            let data = try? Data(contentsOf: tripsURL),
             let decoded = try? JSONDecoder.tripWallet.decode([Trip].self, from: data)
         else { return }
         trips = decoded
     }
 
-    private func saveProfile() {
-        guard let data = try? JSONEncoder().encode(profile) else { return }
-        try? data.write(to: profileURL, options: .atomic)
+    func iCloudStatus() -> ICloudStatus {
+        if FileManager.default.ubiquityIdentityToken == nil {
+            return .notSignedIn
+        }
+        guard FileManager.default.url(forUbiquityContainerIdentifier: nil) != nil else {
+            return .notConfigured
+        }
+        return .available
     }
 
-    private func loadProfile() {
-        guard
-            let data = try? Data(contentsOf: profileURL),
-            let decoded = try? JSONDecoder().decode(UserProfile.self, from: data)
-        else { return }
-        profile = decoded
-    }
-
-    private func iCloudURL() throws -> URL {
-        guard let container = FileManager.default.url(
-            forUbiquityContainerIdentifier: nil
-        ) else {
-            throw ICloudError.notAvailable
+    func backupToICloud() async throws {
+        guard iCloudStatus() == .available else {
+            throw ICloudBackupError.unavailable
         }
 
-        let documents = container.appendingPathComponent("Documents", isDirectory: true)
+        guard let container = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
+            throw ICloudBackupError.unavailable
+        }
+
+        let folder = container.appendingPathComponent("Documents", isDirectory: true)
         try FileManager.default.createDirectory(
-            at: documents,
+            at: folder,
             withIntermediateDirectories: true
         )
-        return documents.appendingPathComponent("TripWallet-iCloud.json")
-    }
 
-    func saveToICloud() async throws {
-        let url = try iCloudURL()
-        let payload = CloudPayload(updatedAt: Date(), trips: trips, profile: profile)
+        let payload = BackupPayload(
+            createdAt: Date(),
+            account: account,
+            trips: trips
+        )
+
         let data = try JSONEncoder.tripWallet.encode(payload)
-        try data.write(to: url, options: .atomic)
+        try data.write(
+            to: folder.appendingPathComponent("TripWalletBackup.json"),
+            options: .atomic
+        )
     }
 
     func restoreFromICloud() async throws {
-        let url = try iCloudURL()
-        let data = try Data(contentsOf: url)
-        let payload = try JSONDecoder.tripWallet.decode(CloudPayload.self, from: data)
-        trips = payload.trips
-        profile = payload.profile
-    }
-
-    private func restoreFromICloudIfNewer() async throws {
-        let url = try iCloudURL()
-        guard let data = try? Data(contentsOf: url) else { return }
-        let payload = try JSONDecoder.tripWallet.decode(CloudPayload.self, from: data)
-
-        let values = try? localURL.resourceValues(forKeys: [.contentModificationDateKey])
-        let localDate = values?.contentModificationDate ?? .distantPast
-
-        if payload.updatedAt > localDate {
-            trips = payload.trips
-            profile = payload.profile
+        guard iCloudStatus() == .available else {
+            throw ICloudBackupError.unavailable
         }
+
+        guard let container = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
+            throw ICloudBackupError.unavailable
+        }
+
+        let url = container
+            .appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent("TripWalletBackup.json")
+
+        let data = try Data(contentsOf: url)
+        let payload = try JSONDecoder.tripWallet.decode(BackupPayload.self, from: data)
+
+        account = payload.account
+        account.isAuthenticated = true
+        trips = payload.trips
     }
 }
 
-private struct CloudPayload: Codable {
-    var updatedAt: Date
-    var trips: [Trip]
-    var profile: UserProfile
+private struct BackupPayload: Codable {
+    let createdAt: Date
+    let account: LocalAccount
+    let trips: [Trip]
 }
 
-enum ICloudError: LocalizedError {
-    case notAvailable
+enum ICloudStatus: Equatable {
+    case available
+    case notSignedIn
+    case notConfigured
+}
+
+enum ICloudBackupError: LocalizedError {
+    case unavailable
 
     var errorDescription: String? {
-        "iCloud non è disponibile. Accedi a iCloud sull’iPhone e attiva iCloud Drive."
+        "Il backup iCloud non è ancora configurato per questa build. Verifica la capability iCloud Documents in Xcode."
     }
 }
 

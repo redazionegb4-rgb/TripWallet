@@ -1,12 +1,23 @@
-TRIPWALLET BUILD 4 – REGISTRAZIONE LOCALE
+TRIPWALLET BUILD 5 — RIFATTA DA ZERO
 
-- Eliminato completamente Sign in with Apple
-- Registrazione locale con nome, email e password
-- Accesso locale dopo il logout
-- Password salvata come hash SHA-256, non in chiaro
-- Rimane soltanto la capability iCloud Documents per il backup
-- Solo iPhone, verticale, iOS 16+, Xcode 15
+Questa versione sostituisce completamente grafica, accesso e flusso della build precedente.
 
-ICLOUD:
-In Signing & Capabilities deve essere presente soltanto iCloud con iCloud Documents.
+CONTENUTO
+- Schermo intero, senza bande nere
+- Registrazione e accesso locale scorrevoli
+- Home con layout standard iOS e nessuna sovrapposizione
+- Selezione Paese con bandiera automatica
+- Città sempre visibile nelle copertine
+- Creazione viaggio guidata
+- Prenotazioni: voli, hotel, treni, autobus, traghetti, attività
+- Biglietti, foto QR code e PDF
+- Spese, valigia e luoghi salvati
+- Solo backup iCloud
+- Solo iPhone, verticale
+- iOS 16+ / Xcode 15
+
+ICLOUD
+Il progetto contiene soltanto iCloud Documents. Nel Target TripWallet:
+Signing & Capabilities > + Capability > iCloud > iCloud Documents.
+Seleziona o crea il container iCloud collegato a com.dmb.tripwallet.
 Non aggiungere Sign in with Apple.

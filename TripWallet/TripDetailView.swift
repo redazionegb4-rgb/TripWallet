@@ -5,24 +5,16 @@ struct TripDetailView: View {
     let tripID: UUID
 
     var body: some View {
-        if let binding = store.binding(for: tripID) {
-            TripDetailContent(trip: binding)
+        if let trip = store.binding(for: tripID) {
+            TripDetailContent(trip: trip)
         } else {
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 Image(systemName: "airplane")
                     .font(.system(size: 54))
-                    .foregroundStyle(AppPalette.purple)
-
+                    .foregroundStyle(AppTheme.violet)
                 Text("Viaggio non trovato")
                     .font(.title2.bold())
-
-                Text("Il viaggio potrebbe essere stato eliminato o non è più disponibile.")
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
             }
-            .padding(30)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemGroupedBackground))
         }
     }
 }
@@ -31,73 +23,86 @@ private struct TripDetailContent: View {
     @Binding var trip: Trip
 
     private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible())
+        GridItem(.flexible(), spacing: 13),
+        GridItem(.flexible(), spacing: 13)
     ]
 
     var body: some View {
         ScrollView {
             VStack(spacing: 22) {
-                HeroTripCardDetail(trip: trip)
+                DestinationCard(trip: trip)
 
-                LazyVGrid(columns: columns, spacing: 14) {
+                LazyVGrid(columns: columns, spacing: 13) {
                     NavigationLink {
                         ItemsView(trip: $trip)
                     } label: {
-                        FeatureCard(
-                            title: "Itinerario",
-                            subtitle: "\(trip.items.count) elementi",
+                        FeatureTile(
+                            title: "Prenotazioni",
+                            subtitle: "\(trip.bookings.count)",
                             icon: "calendar.badge.clock",
-                            colors: [AppPalette.purple, AppPalette.blue]
+                            gradient: AppTheme.primaryGradient
                         )
                     }
 
                     NavigationLink {
                         DocumentsView(trip: $trip)
                     } label: {
-                        FeatureCard(
-                            title: "Biglietti",
-                            subtitle: "\(trip.documents.count) salvati",
+                        FeatureTile(
+                            title: "Biglietti e QR",
+                            subtitle: "\(trip.tickets.count)",
                             icon: "qrcode.viewfinder",
-                            colors: [AppPalette.pink, AppPalette.orange]
+                            gradient: AppTheme.sunsetGradient
                         )
                     }
 
                     NavigationLink {
                         ExpensesView(trip: $trip)
                     } label: {
-                        FeatureCard(
+                        FeatureTile(
                             title: "Spese",
-                            subtitle: trip.totalSpent.formatted(.currency(code: "EUR")),
+                            subtitle: trip.totalExpenses.formatted(.currency(code: "EUR")),
                             icon: "creditcard.fill",
-                            colors: [AppPalette.blue, AppPalette.cyan]
+                            gradient: LinearGradient(
+                                colors: [AppTheme.blue, AppTheme.cyan],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
                     }
 
                     NavigationLink {
                         PackingView(trip: $trip)
                     } label: {
-                        FeatureCard(
+                        FeatureTile(
                             title: "Valigia",
-                            subtitle: "\(trip.packing.filter(\.packed).count)/\(trip.packing.count)",
+                            subtitle: "\(trip.packedCount)/\(trip.packing.count)",
                             icon: "suitcase.rolling.fill",
-                            colors: [AppPalette.orange, AppPalette.pink]
+                            gradient: LinearGradient(
+                                colors: [AppTheme.coral, AppTheme.yellow],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
                     }
 
                     NavigationLink {
                         PlacesView(trip: $trip)
                     } label: {
-                        FeatureCard(
+                        FeatureTile(
                             title: "Luoghi",
-                            subtitle: "\(trip.places.count) salvati",
+                            subtitle: "\(trip.places.count)",
                             icon: "map.fill",
-                            colors: [AppPalette.cyan, AppPalette.blue]
+                            gradient: LinearGradient(
+                                colors: [AppTheme.cyan, AppTheme.violet],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
                     }
                 }
             }
             .padding(20)
+            .padding(.bottom, 20)
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle(trip.title)
@@ -105,77 +110,31 @@ private struct TripDetailContent: View {
     }
 }
 
-private struct HeroTripCardDetail: View {
-    let trip: Trip
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Group {
-                if
-                    let data = trip.coverImageData,
-                    let image = UIImage(data: data)
-                {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    AppPalette.warmGradient
-                }
-            }
-            .frame(height: 245)
-            .clipped()
-
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.75)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("\(flagEmoji(countryCode: trip.countryCode)) \(trip.city)")
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                Text(trip.country)
-                    .font(.headline)
-                Text("\(trip.startDate.formatted(date: .long, time: .omitted)) – \(trip.endDate.formatted(date: .long, time: .omitted))")
-                    .font(.subheadline)
-            }
-            .foregroundStyle(.white)
-            .padding(22)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 30))
-    }
-}
-
-private struct FeatureCard: View {
+private struct FeatureTile: View {
     let title: String
     let subtitle: String
     let icon: String
-    let colors: [Color]
+    let gradient: LinearGradient
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 13) {
+        VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon)
                 .font(.title2)
                 .frame(width: 48, height: 48)
                 .background(.white.opacity(0.2))
-                .clipShape(RoundedRectangle(cornerRadius: 15))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
 
             Text(title)
                 .font(.headline)
+
             Text(subtitle)
-                .font(.caption)
-                .opacity(0.85)
+                .font(.subheadline.weight(.semibold))
+                .opacity(0.88)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(
-            LinearGradient(
-                colors: colors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .frame(maxWidth: .infinity, minHeight: 135, alignment: .leading)
+        .padding(17)
+        .background(gradient)
         .foregroundStyle(.white)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .clipShape(RoundedRectangle(cornerRadius: 23))
     }
 }

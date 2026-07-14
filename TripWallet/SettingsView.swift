@@ -2,24 +2,31 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var store: TravelStore
+
     @State private var message = ""
-    @State private var isWorking = false
+    @State private var working = false
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
+            VStack(spacing: 20) {
                 profileCard
                 iCloudCard
-                infoCard
+                appInfoCard
             }
             .padding(20)
+            .padding(.bottom, 20)
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Profilo")
-        .alert("TripWallet", isPresented: Binding(
-            get: { !message.isEmpty },
-            set: { if !$0 { message = "" } }
-        )) {
+        .alert(
+            "TripWallet",
+            isPresented: Binding(
+                get: { !message.isEmpty },
+                set: { newValue in
+                    if !newValue { message = "" }
+                }
+            )
+        ) {
             Button("OK", role: .cancel) { message = "" }
         } message: {
             Text(message)
@@ -29,103 +36,145 @@ struct SettingsView: View {
     private var profileCard: some View {
         VStack(spacing: 14) {
             ZStack {
-                AppPalette.warmGradient
-                Text(store.profile.name.prefix(1).uppercased())
+                AppTheme.sunsetGradient
+                Text(String(store.account.fullName.prefix(1)).uppercased())
                     .font(.system(size: 34, weight: .heavy))
                     .foregroundStyle(.white)
             }
             .frame(width: 82, height: 82)
             .clipShape(Circle())
 
-            Text(store.profile.name)
+            Text(store.account.fullName)
                 .font(.title2.bold())
-            Text(store.profile.email)
+
+            Text(store.account.email)
                 .foregroundStyle(.secondary)
 
-            Button("Esci dal profilo", role: .destructive) {
-                store.profile.isLoggedIn = false
+            Button("Esci", role: .destructive) {
+                store.logout()
             }
         }
         .frame(maxWidth: .infinity)
         .padding(24)
         .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 
     private var iCloudCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("Backup iCloud", systemImage: "icloud.fill")
-                .font(.title2.bold())
-                .foregroundStyle(AppPalette.blue)
+            HStack {
+                Image(systemName: "icloud.fill")
+                    .font(.title2)
+                    .foregroundStyle(AppTheme.blue)
 
-            Text("TripWallet salva automaticamente viaggi, biglietti e profilo su iCloud. Non sono presenti backup manuali o altri servizi.")
+                Text("Backup iCloud")
+                    .font(.title2.bold())
+
+                Spacer()
+
+                statusBadge
+            }
+
+            Text("È l’unico sistema di backup dell’app. I dati locali continuano a funzionare anche se iCloud non è ancora configurato.")
                 .foregroundStyle(.secondary)
 
             Button {
-                isWorking = true
+                working = true
                 Task {
                     do {
-                        try await store.saveToICloud()
-                        message = "Backup iCloud completato."
+                        try await store.backupToICloud()
+                        message = "Backup completato su iCloud."
                     } catch {
                         message = error.localizedDescription
                     }
-                    isWorking = false
+                    working = false
                 }
             } label: {
                 Label(
-                    isWorking ? "Salvataggio…" : "Esegui backup ora",
+                    working ? "Salvataggio…" : "Esegui backup",
                     systemImage: "arrow.up.circle.fill"
                 )
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                .background(AppPalette.gradient)
+                .background(AppTheme.primaryGradient)
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .clipShape(RoundedRectangle(cornerRadius: 17))
             }
-            .disabled(isWorking)
+            .disabled(working || store.iCloudStatus() != .available)
 
             Button {
-                isWorking = true
+                working = true
                 Task {
                     do {
                         try await store.restoreFromICloud()
-                        message = "Dati ripristinati da iCloud."
+                        message = "Backup ripristinato correttamente."
                     } catch {
                         message = error.localizedDescription
                     }
-                    isWorking = false
+                    working = false
                 }
             } label: {
                 Label("Ripristina da iCloud", systemImage: "arrow.down.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 15)
-                    .background(AppPalette.blue.opacity(0.12))
-                    .foregroundStyle(AppPalette.blue)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .background(AppTheme.blue.opacity(0.12))
+                    .foregroundStyle(AppTheme.blue)
+                    .clipShape(RoundedRectangle(cornerRadius: 17))
             }
-            .disabled(isWorking)
+            .disabled(working || store.iCloudStatus() != .available)
         }
         .padding(22)
         .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 
-    private var infoCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    @ViewBuilder
+    private var statusBadge: some View {
+        switch store.iCloudStatus() {
+        case .available:
+            Text("Disponibile")
+                .font(.caption.bold())
+                .foregroundStyle(.green)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.green.opacity(0.12))
+                .clipShape(Capsule())
+
+        case .notSignedIn:
+            Text("Accesso richiesto")
+                .font(.caption.bold())
+                .foregroundStyle(.orange)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.orange.opacity(0.12))
+                .clipShape(Capsule())
+
+        case .notConfigured:
+            Text("Da configurare")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.secondary.opacity(0.12))
+                .clipShape(Capsule())
+        }
+    }
+
+    private var appInfoCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text("TripWallet")
                 .font(.headline)
-            Text("Versione 2.0 • Solo iPhone")
+            Text("Versione 3.0 • Solo iPhone")
                 .foregroundStyle(.secondary)
-            Text("I dati restano sul dispositivo e nel tuo account iCloud.")
+            Text("Profilo locale, nessun account esterno.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(22)
         .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 }

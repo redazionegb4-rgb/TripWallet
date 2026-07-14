@@ -1,117 +1,120 @@
 import Foundation
 
-struct UserProfile: Codable, Equatable {
-    var name: String = ""
+struct LocalAccount: Codable, Equatable {
+    var fullName: String = ""
     var email: String = ""
-    var passwordHash: String? = nil
-    var isLoggedIn: Bool = false
+    var passwordHash: String = ""
+    var isAuthenticated: Bool = false
+}
+
+struct CountryOption: Identifiable, Hashable {
+    let code: String
+    let name: String
+    var id: String { code }
+
+    static let common: [CountryOption] = [
+        .init(code: "IT", name: "Italia"),
+        .init(code: "ES", name: "Spagna"),
+        .init(code: "FR", name: "Francia"),
+        .init(code: "PT", name: "Portogallo"),
+        .init(code: "GR", name: "Grecia"),
+        .init(code: "GB", name: "Regno Unito"),
+        .init(code: "US", name: "Stati Uniti"),
+        .init(code: "DE", name: "Germania"),
+        .init(code: "NL", name: "Paesi Bassi"),
+        .init(code: "CH", name: "Svizzera"),
+        .init(code: "AT", name: "Austria"),
+        .init(code: "HR", name: "Croazia"),
+        .init(code: "MT", name: "Malta"),
+        .init(code: "AE", name: "Emirati Arabi Uniti"),
+        .init(code: "JP", name: "Giappone"),
+        .init(code: "TH", name: "Thailandia"),
+        .init(code: "MX", name: "Messico"),
+        .init(code: "BR", name: "Brasile"),
+        .init(code: "EG", name: "Egitto"),
+        .init(code: "MA", name: "Marocco")
+    ]
 }
 
 struct Trip: Identifiable, Codable, Hashable {
     var id = UUID()
     var title: String
     var city: String
-    var country: String
+    var countryName: String
     var countryCode: String
     var startDate: Date
     var endDate: Date
+    var coverImage: Data?
     var notes: String = ""
-    var coverImageData: Data? = nil
-    var items: [TravelItem] = []
+    var bookings: [Booking] = []
+    var tickets: [TravelTicket] = []
     var expenses: [Expense] = []
-    var packing: [PackingItem] = []
+    var packing: [PackingEntry] = []
     var places: [SavedPlace] = []
-    var documents: [TravelDocument] = []
 
-    var destination: String {
-        city.isEmpty ? country : "\(city), \(country)"
-    }
-
-    var totalSpent: Double {
+    var totalExpenses: Double {
         expenses.reduce(0) { $0 + $1.amount }
     }
 
-    var daysCount: Int {
+    var packedCount: Int {
+        packing.filter(\.isPacked).count
+    }
+
+    var duration: Int {
         max(1, (Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)
     }
 }
 
-enum TravelItemType: String, Codable, CaseIterable, Identifiable {
+enum BookingType: String, Codable, CaseIterable, Identifiable {
     case flight = "Volo"
     case hotel = "Hotel"
     case train = "Treno"
+    case bus = "Autobus"
     case ferry = "Traghetto"
-    case bus = "Bus"
     case activity = "Attività"
-    case reminder = "Promemoria"
 
     var id: String { rawValue }
 
-    var icon: String {
+    var symbol: String {
         switch self {
         case .flight: return "airplane"
         case .hotel: return "building.2.fill"
         case .train: return "tram.fill"
-        case .ferry: return "ferry.fill"
         case .bus: return "bus.fill"
+        case .ferry: return "ferry.fill"
         case .activity: return "ticket.fill"
-        case .reminder: return "bell.fill"
         }
     }
 }
 
-struct TravelItem: Identifiable, Codable, Hashable {
+struct Booking: Identifiable, Codable, Hashable {
     var id = UUID()
-    var type: TravelItemType
+    var type: BookingType
     var title: String
-    var subtitle: String = ""
-    var date: Date
-    var endDate: Date? = nil
-    var location: String = ""
-    var bookingCode: String = ""
-    var notes: String = ""
-    var notify: Bool = false
+    var provider: String
+    var startDate: Date
+    var location: String
+    var confirmationCode: String
+    var reminderEnabled: Bool
 }
 
-struct Expense: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var title: String
-    var amount: Double
-    var category: String
-    var date: Date
-}
-
-struct PackingItem: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var title: String
-    var category: String
-    var packed: Bool = false
-}
-
-struct SavedPlace: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var name: String
-    var address: String
-    var category: String
-}
-
-enum DocumentKind: String, Codable, CaseIterable, Identifiable {
-    case flight = "Carta d’imbarco"
-    case hotel = "Voucher hotel"
-    case train = "Biglietto treno"
-    case event = "Biglietto evento"
+enum TicketType: String, Codable, CaseIterable, Identifiable {
+    case boardingPass = "Carta d’imbarco"
+    case hotelVoucher = "Voucher hotel"
+    case trainTicket = "Biglietto treno"
+    case eventTicket = "Biglietto evento"
     case insurance = "Assicurazione"
-    case identity = "Documento personale"
+    case identity = "Documento"
     case other = "Altro"
 
     var id: String { rawValue }
 
-    var icon: String {
+    var symbol: String {
         switch self {
-        case .flight: return "airplane"
-        case .hotel: return "building.2.fill"
-        case .train: return "tram.fill"
-        case .event: return "ticket.fill"
+        case .boardingPass: return "airplane"
+        case .hotelVoucher: return "building.2.fill"
+        case .trainTicket: return "tram.fill"
+        case .eventTicket: return "ticket.fill"
         case .insurance: return "cross.case.fill"
         case .identity: return "person.text.rectangle.fill"
         case .other: return "doc.fill"
@@ -119,13 +122,41 @@ enum DocumentKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-struct TravelDocument: Identifiable, Codable, Hashable {
+struct TravelTicket: Identifiable, Codable, Hashable {
     var id = UUID()
     var title: String
-    var kind: DocumentKind
-    var bookingCode: String = ""
-    var imageData: Data? = nil
-    var fileName: String? = nil
-    var fileData: Data? = nil
-    var notes: String = ""
+    var type: TicketType
+    var referenceCode: String
+    var imageData: Data?
+    var fileData: Data?
+    var fileName: String?
+    var notes: String
+}
+
+struct Expense: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var title: String
+    var category: String
+    var amount: Double
+    var date: Date
+}
+
+struct PackingEntry: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var title: String
+    var isPacked: Bool = false
+}
+
+struct SavedPlace: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var name: String
+    var address: String
+}
+
+func flagEmoji(for countryCode: String) -> String {
+    let upper = countryCode.uppercased()
+    guard upper.count == 2 else { return "🌍" }
+    let base: UInt32 = 127397
+    let scalars = upper.unicodeScalars.compactMap { UnicodeScalar(base + $0.value) }
+    return String(String.UnicodeScalarView(scalars))
 }

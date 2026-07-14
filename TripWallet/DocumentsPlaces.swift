@@ -5,30 +5,30 @@ import UniformTypeIdentifiers
 struct DocumentsView: View {
     @Binding var trip: Trip
     @State private var showAdd = false
-    @State private var selectedDocument: TravelDocument?
+    @State private var previewTicket: TravelTicket?
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
-                if trip.documents.isEmpty {
+                if trip.tickets.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "qrcode.viewfinder")
                             .font(.system(size: 58))
-                            .foregroundStyle(AppPalette.purple)
-                        Text("Biglietti e QR")
+                            .foregroundStyle(AppTheme.violet)
+                        Text("Biglietti e QR code")
                             .font(.title2.bold())
-                        Text("Salva carte d’imbarco, voucher hotel, PDF e immagini con QR code.")
+                        Text("Salva carte d’imbarco, voucher hotel, immagini e PDF.")
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(30)
                 }
 
-                ForEach(trip.documents) { document in
+                ForEach(trip.tickets) { ticket in
                     Button {
-                        selectedDocument = document
+                        previewTicket = ticket
                     } label: {
-                        DocumentCard(document: document)
+                        TicketCard(ticket: ticket)
                     }
                     .buttonStyle(.plain)
                 }
@@ -36,59 +36,57 @@ struct DocumentsView: View {
             .padding(20)
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Biglietti e documenti")
+        .navigationTitle("Biglietti e QR")
         .toolbar {
-            Button {
-                showAdd = true
-            } label: {
-                Image(systemName: "plus.circle.fill")
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showAdd = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                }
             }
         }
         .sheet(isPresented: $showAdd) {
-            AddDocumentView(trip: $trip)
+            AddTicketView(trip: $trip)
         }
-        .sheet(item: $selectedDocument) { document in
-            DocumentPreview(document: document)
+        .sheet(item: $previewTicket) { ticket in
+            TicketPreview(ticket: ticket)
         }
     }
 }
 
-private struct DocumentCard: View {
-    let document: TravelDocument
+private struct TicketCard: View {
+    let ticket: TravelTicket
 
     var body: some View {
         HStack(spacing: 15) {
             ZStack {
-                AppPalette.warmGradient
-                Image(systemName: document.kind.icon)
+                AppTheme.sunsetGradient
+                Image(systemName: ticket.type.symbol)
                     .font(.title2)
                     .foregroundStyle(.white)
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 58, height: 58)
             .clipShape(RoundedRectangle(cornerRadius: 17))
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(document.title)
+                Text(ticket.title)
                     .font(.headline)
-                Text(document.kind.rawValue)
+                Text(ticket.type.rawValue)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                if !document.bookingCode.isEmpty {
-                    Text("Codice: \(document.bookingCode)")
+
+                if !ticket.referenceCode.isEmpty {
+                    Text("Codice: \(ticket.referenceCode)")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppPalette.purple)
+                        .foregroundStyle(AppTheme.violet)
                 }
             }
 
             Spacer()
 
-            if document.imageData != nil {
-                Image(systemName: "qrcode")
-                    .foregroundStyle(AppPalette.purple)
-            } else if document.fileData != nil {
-                Image(systemName: "doc.richtext.fill")
-                    .foregroundStyle(AppPalette.blue)
-            }
+            Image(systemName: ticket.imageData != nil ? "qrcode" : "doc.fill")
+                .foregroundStyle(AppTheme.violet)
         }
         .padding()
         .background(.background)
@@ -96,69 +94,66 @@ private struct DocumentCard: View {
     }
 }
 
-private struct AddDocumentView: View {
+private struct AddTicketView: View {
     @Binding var trip: Trip
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""
-    @State private var kind: DocumentKind = .flight
-    @State private var bookingCode = ""
+    @State private var type: TicketType = .boardingPass
+    @State private var referenceCode = ""
     @State private var notes = ""
-    @State private var imageItem: PhotosPickerItem?
+    @State private var photoItem: PhotosPickerItem?
     @State private var imageData: Data?
-    @State private var fileName: String?
     @State private var fileData: Data?
-    @State private var showFileImporter = false
+    @State private var fileName: String?
+    @State private var showImporter = false
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Dettagli") {
+                Section("Informazioni") {
                     TextField("Titolo", text: $title)
 
-                    Picker("Tipo", selection: $kind) {
-                        ForEach(DocumentKind.allCases) { kind in
-                            Label(kind.rawValue, systemImage: kind.icon)
-                                .tag(kind)
+                    Picker("Tipo", selection: $type) {
+                        ForEach(TicketType.allCases) { option in
+                            Label(option.rawValue, systemImage: option.symbol)
+                                .tag(option)
                         }
                     }
 
-                    TextField("Codice prenotazione", text: $bookingCode)
+                    TextField("Codice prenotazione", text: $referenceCode)
                     TextField("Note", text: $notes, axis: .vertical)
                 }
 
-                Section("Biglietto o QR code") {
-                    PhotosPicker(selection: $imageItem, matching: .images) {
+                Section("Allegato") {
+                    PhotosPicker(selection: $photoItem, matching: .images) {
                         Label(
-                            imageData == nil ? "Scegli foto o QR" : "Foto selezionata",
+                            imageData == nil ? "Scegli foto o QR code" : "Foto selezionata",
                             systemImage: "photo.on.rectangle"
                         )
                     }
-                    .onChange(of: imageItem) { newValue in
+                    .onChange(of: photoItem) { item in
                         Task {
-                            imageData = try? await newValue?.loadTransferable(type: Data.self)
+                            imageData = try? await item?.loadTransferable(type: Data.self)
                         }
                     }
 
                     Button {
-                        showFileImporter = true
+                        showImporter = true
                     } label: {
                         Label(
-                            fileName == nil ? "Importa PDF o file" : fileName ?? "File selezionato",
+                            fileName ?? "Importa PDF",
                             systemImage: "doc.badge.plus"
                         )
                     }
                 }
 
-                if
-                    let imageData,
-                    let image = UIImage(data: imageData)
-                {
+                if let imageData, let image = UIImage(data: imageData) {
                     Section("Anteprima") {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
-                            .frame(maxHeight: 320)
+                            .frame(maxHeight: 300)
                     }
                 }
             }
@@ -167,16 +162,17 @@ private struct AddDocumentView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annulla") { dismiss() }
                 }
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Salva") {
-                        trip.documents.append(
-                            TravelDocument(
-                                title: title.isEmpty ? kind.rawValue : title,
-                                kind: kind,
-                                bookingCode: bookingCode,
+                        trip.tickets.append(
+                            TravelTicket(
+                                title: title.isEmpty ? type.rawValue : title,
+                                type: type,
+                                referenceCode: referenceCode,
                                 imageData: imageData,
-                                fileName: fileName,
                                 fileData: fileData,
+                                fileName: fileName,
                                 notes: notes
                             )
                         )
@@ -185,7 +181,7 @@ private struct AddDocumentView: View {
                 }
             }
             .fileImporter(
-                isPresented: $showFileImporter,
+                isPresented: $showImporter,
                 allowedContentTypes: [.pdf, .image],
                 allowsMultipleSelection: false
             ) { result in
@@ -194,9 +190,11 @@ private struct AddDocumentView: View {
                     let url = urls.first
                 else { return }
 
-                let access = url.startAccessingSecurityScopedResource()
+                let hasAccess = url.startAccessingSecurityScopedResource()
                 defer {
-                    if access { url.stopAccessingSecurityScopedResource() }
+                    if hasAccess {
+                        url.stopAccessingSecurityScopedResource()
+                    }
                 }
 
                 fileName = url.lastPathComponent
@@ -206,48 +204,52 @@ private struct AddDocumentView: View {
     }
 }
 
-private struct DocumentPreview: View {
-    let document: TravelDocument
+private struct TicketPreview: View {
+    let ticket: TravelTicket
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    if
-                        let data = document.imageData,
-                        let image = UIImage(data: data)
-                    {
+                    if let data = ticket.imageData, let image = UIImage(data: data) {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
                             .clipShape(RoundedRectangle(cornerRadius: 20))
                     } else {
-                        Image(systemName: document.kind.icon)
-                            .font(.system(size: 80))
-                            .foregroundStyle(AppPalette.purple)
-                            .padding(40)
+                        ZStack {
+                            AppTheme.primaryGradient
+                            Image(systemName: ticket.type.symbol)
+                                .font(.system(size: 70))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(height: 260)
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
 
-                    VStack(spacing: 8) {
-                        Text(document.title)
-                            .font(.title.bold())
-                        Text(document.kind.rawValue)
-                            .foregroundStyle(.secondary)
-                        if !document.bookingCode.isEmpty {
-                            Text(document.bookingCode)
-                                .font(.title3.monospaced().bold())
-                                .padding()
-                                .background(AppPalette.purple.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
+                    Text(ticket.title)
+                        .font(.title.bold())
+
+                    Text(ticket.type.rawValue)
+                        .foregroundStyle(.secondary)
+
+                    if !ticket.referenceCode.isEmpty {
+                        Text(ticket.referenceCode)
+                            .font(.title3.monospaced().bold())
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(AppTheme.violet.opacity(0.10))
+                            .clipShape(RoundedRectangle(cornerRadius: 15))
                     }
                 }
                 .padding(20)
             }
             .navigationTitle("Anteprima")
             .toolbar {
-                Button("Chiudi") { dismiss() }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Chiudi") { dismiss() }
+                }
             }
         }
     }
@@ -263,14 +265,13 @@ struct PlacesView: View {
             Section("Nuovo luogo") {
                 TextField("Nome", text: $name)
                 TextField("Indirizzo", text: $address)
-                Button("Aggiungi") {
-                    guard !name.isEmpty else { return }
+
+                Button("Aggiungi luogo") {
+                    let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !clean.isEmpty else { return }
+
                     trip.places.append(
-                        SavedPlace(
-                            name: name,
-                            address: address,
-                            category: "Luogo"
-                        )
+                        SavedPlace(name: clean, address: address)
                     )
                     name = ""
                     address = ""
@@ -278,7 +279,7 @@ struct PlacesView: View {
             }
 
             ForEach(trip.places) { place in
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(place.name)
                         .font(.headline)
                     Text(place.address)

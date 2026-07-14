@@ -10,25 +10,25 @@ final class NotificationManager {
         )) ?? false
     }
 
-    func schedule(for item: TravelItem, tripTitle: String) {
-        guard item.notify, item.date > Date() else { return }
+    func schedule(booking: Booking, tripTitle: String) {
+        guard booking.reminderEnabled, booking.startDate > Date() else { return }
 
         let content = UNMutableNotificationContent()
         content.title = tripTitle
-        content.body = item.title
+        content.body = "\(booking.type.rawValue): \(booking.title)"
         content.sound = .default
 
-        let alertDate = Calendar.current.date(
+        let reminderDate = Calendar.current.date(
             byAdding: .hour,
             value: -2,
-            to: item.date
-        ) ?? item.date
+            to: booking.startDate
+        ) ?? booking.startDate
 
-        guard alertDate > Date() else { return }
+        guard reminderDate > Date() else { return }
 
         let components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute],
-            from: alertDate
+            from: reminderDate
         )
 
         let trigger = UNCalendarNotificationTrigger(
@@ -37,7 +37,7 @@ final class NotificationManager {
         )
 
         let request = UNNotificationRequest(
-            identifier: item.id.uuidString,
+            identifier: booking.id.uuidString,
             content: content,
             trigger: trigger
         )

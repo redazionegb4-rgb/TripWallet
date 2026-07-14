@@ -1,34 +1,35 @@
 import SwiftUI
-import CryptoKit
 
-struct AppPalette {
-    static let purple = Color(red: 0.43, green: 0.24, blue: 0.96)
-    static let blue = Color(red: 0.08, green: 0.55, blue: 0.98)
-    static let cyan = Color(red: 0.02, green: 0.82, blue: 0.89)
-    static let pink = Color(red: 0.98, green: 0.25, blue: 0.62)
-    static let orange = Color(red: 1.00, green: 0.49, blue: 0.15)
+enum AppTheme {
+    static let violet = Color(red: 0.39, green: 0.23, blue: 0.91)
+    static let blue = Color(red: 0.08, green: 0.50, blue: 0.98)
+    static let cyan = Color(red: 0.02, green: 0.77, blue: 0.86)
+    static let coral = Color(red: 1.00, green: 0.34, blue: 0.42)
+    static let yellow = Color(red: 1.00, green: 0.72, blue: 0.20)
 
-    static let gradient = LinearGradient(
-        colors: [purple, blue, cyan],
+    static let primaryGradient = LinearGradient(
+        colors: [violet, blue, cyan],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
 
-    static let warmGradient = LinearGradient(
-        colors: [purple, pink, orange],
+    static let sunsetGradient = LinearGradient(
+        colors: [violet, coral, yellow],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
 }
 
 struct RootView: View {
+    @State private var showNotificationIntro = false
+
     var body: some View {
         TabView {
             NavigationStack {
                 HomeView()
             }
             .tabItem {
-                Label("Home", systemImage: "sparkles")
+                Label("Home", systemImage: "house.fill")
             }
 
             NavigationStack {
@@ -45,89 +46,116 @@ struct RootView: View {
                 Label("Profilo", systemImage: "person.crop.circle.fill")
             }
         }
-        .tint(AppPalette.purple)
+        .tint(AppTheme.violet)
+        .onAppear {
+            showNotificationIntro = !UserDefaults.standard.bool(
+                forKey: "notificationIntroCompleted"
+            )
+        }
+        .sheet(isPresented: $showNotificationIntro) {
+            NotificationPermissionIntro(isPresented: $showNotificationIntro)
+        }
     }
 }
 
-struct LoginView: View {
+struct AuthenticationView: View {
     @EnvironmentObject private var store: TravelStore
 
-    @State private var isRegistering = true
+    @State private var mode = 0
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
+    @State private var confirmPassword = ""
     @State private var errorMessage = ""
 
-    private var normalizedEmail: String {
-        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
+    private var isRegistration: Bool { mode == 0 }
 
-    private var canContinue: Bool {
-        let validEmail = normalizedEmail.contains("@")
-        let validPassword = password.count >= 6
-        let validName = !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return validEmail && validPassword && (!isRegistering || validName)
+    private var canSubmit: Bool {
+        if isRegistration {
+            return !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                email.contains("@") &&
+                password.count >= 6 &&
+                password == confirmPassword
+        } else {
+            return email.contains("@") && password.count >= 6
+        }
     }
 
     var body: some View {
         ZStack {
-            AppPalette.warmGradient
+            AppTheme.primaryGradient
                 .ignoresSafeArea()
 
             Circle()
-                .fill(.white.opacity(0.15))
-                .frame(width: 360, height: 360)
-                .offset(x: 150, y: -280)
+                .fill(.white.opacity(0.13))
+                .frame(width: 390, height: 390)
+                .offset(x: 170, y: -310)
 
             ScrollView {
                 VStack(spacing: 22) {
-                    Image(systemName: "airplane.circle.fill")
-                        .font(.system(size: 82))
-                        .foregroundStyle(.white)
-                        .padding(.top, 50)
+                    Spacer(minLength: 46)
 
-                    Text(isRegistering ? "Crea il tuo profilo" : "Bentornato")
-                        .font(.system(size: 34, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
+                    ZStack {
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 92, height: 92)
 
-                    Text("Registrazione locale: nessun accesso Apple e nessun account esterno.")
-                        .font(.headline)
-                        .foregroundStyle(.white.opacity(0.88))
-                        .multilineTextAlignment(.center)
+                        Image(systemName: "airplane")
+                            .font(.system(size: 42, weight: .bold))
+                            .foregroundStyle(AppTheme.violet)
+                    }
 
-                    Picker("Accesso", selection: $isRegistering) {
-                        Text("Registrati").tag(true)
-                        Text("Accedi").tag(false)
+                    VStack(spacing: 8) {
+                        Text(isRegistration ? "Crea il tuo profilo" : "Bentornato")
+                            .font(.system(size: 34, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+
+                        Text("Profilo locale, viaggi e biglietti sempre con te.")
+                            .font(.headline)
+                            .foregroundStyle(.white.opacity(0.86))
+                            .multilineTextAlignment(.center)
+                    }
+
+                    Picker("", selection: $mode) {
+                        Text("Registrati").tag(0)
+                        Text("Accedi").tag(1)
                     }
                     .pickerStyle(.segmented)
                     .padding(5)
                     .background(.white.opacity(0.92))
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
 
                     VStack(spacing: 14) {
-                        if isRegistering {
-                            TextField("Nome", text: $name)
-                                .textContentType(.name)
-                                .padding(17)
-                                .background(.white.opacity(0.95))
-                                .clipShape(RoundedRectangle(cornerRadius: 18))
+                        if isRegistration {
+                            AuthField(
+                                title: "Nome e cognome",
+                                systemImage: "person.fill",
+                                text: $name
+                            )
                         }
 
-                        TextField("Email", text: $email)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .padding(17)
-                            .background(.white.opacity(0.95))
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                        AuthField(
+                            title: "Email",
+                            systemImage: "envelope.fill",
+                            text: $email,
+                            keyboardType: .emailAddress,
+                            autocapitalization: .never
+                        )
 
-                        SecureField("Password (almeno 6 caratteri)", text: $password)
-                            .textContentType(isRegistering ? .newPassword : .password)
-                            .padding(17)
-                            .background(.white.opacity(0.95))
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                        AuthSecureField(
+                            title: "Password",
+                            systemImage: "lock.fill",
+                            text: $password
+                        )
+
+                        if isRegistration {
+                            AuthSecureField(
+                                title: "Conferma password",
+                                systemImage: "lock.shield.fill",
+                                text: $confirmPassword
+                            )
+                        }
                     }
 
                     if !errorMessage.isEmpty {
@@ -141,117 +169,140 @@ struct LoginView: View {
                     }
 
                     Button {
-                        submit()
+                        errorMessage = ""
+                        if isRegistration {
+                            store.register(
+                                name: name,
+                                email: email,
+                                password: password
+                            )
+                        } else if !store.login(email: email, password: password) {
+                            errorMessage = "Email o password non corretti."
+                        }
                     } label: {
-                        Text(isRegistering ? "Crea profilo" : "Accedi")
+                        Text(isRegistration ? "Crea profilo" : "Accedi")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 17)
                             .background(.white)
-                            .foregroundStyle(AppPalette.purple)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .foregroundStyle(AppTheme.violet)
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
                     }
-                    .disabled(!canContinue)
-                    .opacity(canContinue ? 1 : 0.55)
+                    .disabled(!canSubmit)
+                    .opacity(canSubmit ? 1 : 0.55)
 
-                    Text("Le credenziali restano sul dispositivo. I dati dei viaggi vengono salvati nel backup iCloud.")
+                    Text("La registrazione è locale. Il backup può essere salvato soltanto su iCloud.")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.78))
                         .multilineTextAlignment(.center)
-                        .padding(.bottom, 30)
+
+                    Spacer(minLength: 46)
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 24)
             }
-        }
-        .onAppear {
-            if !store.profile.email.isEmpty {
-                isRegistering = false
-                email = store.profile.email
-            }
-        }
-    }
-
-    private func submit() {
-        errorMessage = ""
-        let hash = password.sha256
-
-        if isRegistering {
-            store.profile = UserProfile(
-                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                email: normalizedEmail,
-                passwordHash: hash,
-                isLoggedIn: true
-            )
-        } else {
-            guard !store.profile.email.isEmpty else {
-                errorMessage = "Non esiste ancora un profilo locale. Seleziona Registrati."
-                return
-            }
-
-            guard store.profile.email.lowercased() == normalizedEmail,
-                  store.profile.passwordHash == hash else {
-                errorMessage = "Email o password non corretti."
-                return
-            }
-
-            store.profile.isLoggedIn = true
+            .scrollDismissesKeyboard(.interactively)
         }
     }
 }
 
-private extension String {
-    var sha256: String {
-        SHA256.hash(data: Data(utf8)).map { String(format: "%02x", $0) }.joined()
+private struct AuthField: View {
+    let title: String
+    let systemImage: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+    var autocapitalization: TextInputAutocapitalization = .words
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(AppTheme.violet)
+                .frame(width: 24)
+
+            TextField(title, text: $text)
+                .keyboardType(keyboardType)
+                .textInputAutocapitalization(autocapitalization)
+                .autocorrectionDisabled()
+        }
+        .padding(17)
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
 
-struct NotificationIntroView: View {
+private struct AuthSecureField: View {
+    let title: String
+    let systemImage: String
+    @Binding var text: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(AppTheme.violet)
+                .frame(width: 24)
+
+            SecureField(title, text: $text)
+                .textContentType(.password)
+        }
+        .padding(17)
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+struct NotificationPermissionIntro: View {
     @Binding var isPresented: Bool
 
     var body: some View {
-        ZStack {
-            AppPalette.gradient
-                .ignoresSafeArea()
-
+        NavigationStack {
             VStack(spacing: 24) {
                 Spacer()
 
-                Image(systemName: "bell.badge.fill")
-                    .font(.system(size: 82))
-                    .foregroundStyle(.white)
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.primaryGradient)
+                        .frame(width: 128, height: 128)
 
-                Text("Non perdere partenze e check-in")
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 54))
+                        .foregroundStyle(.white)
+                }
+
+                Text("Promemoria di viaggio")
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
 
-                Text("TripWallet può ricordarti voli, hotel, attività e documenti importanti.")
+                Text("Ricevi avvisi in italiano per voli, hotel, attività e partenze importanti.")
                     .font(.title3)
-                    .foregroundStyle(.white.opacity(0.88))
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
                 Button {
                     Task {
                         _ = await NotificationManager.shared.requestAuthorization()
-                        UserDefaults.standard.set(true, forKey: "notificationIntroSeen")
+                        UserDefaults.standard.set(
+                            true,
+                            forKey: "notificationIntroCompleted"
+                        )
                         isPresented = false
                     }
                 } label: {
                     Label("Attiva notifiche", systemImage: "bell.fill")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .background(.white)
-                        .foregroundStyle(AppPalette.purple)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .padding(.vertical, 16)
+                        .background(AppTheme.primaryGradient)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
 
                 Button("Non ora") {
-                    UserDefaults.standard.set(true, forKey: "notificationIntroSeen")
+                    UserDefaults.standard.set(
+                        true,
+                        forKey: "notificationIntroCompleted"
+                    )
                     isPresented = false
                 }
-                .foregroundStyle(.white)
                 .font(.headline)
+                .foregroundStyle(.secondary)
 
                 Spacer()
             }

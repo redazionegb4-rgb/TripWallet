@@ -8,19 +8,20 @@ struct ExpensesView: View {
         List {
             Section {
                 HStack {
-                    Text("Totale")
+                    Text("Totale speso")
                         .font(.headline)
                     Spacer()
-                    Text(trip.totalSpent.formatted(.currency(code: "EUR")))
+                    Text(trip.totalExpenses.formatted(.currency(code: "EUR")))
                         .font(.title2.bold())
-                        .foregroundStyle(AppPalette.purple)
+                        .foregroundStyle(AppTheme.violet)
                 }
             }
 
             ForEach(trip.expenses) { expense in
                 HStack {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(expense.title)
+                            .font(.headline)
                         Text(expense.category)
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -32,12 +33,14 @@ struct ExpensesView: View {
             }
             .onDelete { trip.expenses.remove(atOffsets: $0) }
         }
-        .navigationTitle("Budget e spese")
+        .navigationTitle("Spese")
         .toolbar {
-            Button {
-                showAdd = true
-            } label: {
-                Image(systemName: "plus.circle.fill")
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showAdd = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                }
             }
         }
         .sheet(isPresented: $showAdd) {
@@ -49,6 +52,7 @@ struct ExpensesView: View {
 private struct AddExpenseView: View {
     @Binding var trip: Trip
     @Environment(\.dismiss) private var dismiss
+
     @State private var title = ""
     @State private var amount = 0.0
     @State private var category = "Altro"
@@ -59,8 +63,12 @@ private struct AddExpenseView: View {
                 TextField("Descrizione", text: $title)
                 TextField("Importo", value: $amount, format: .number)
                     .keyboardType(.decimalPad)
+
                 Picker("Categoria", selection: $category) {
-                    ForEach(["Voli", "Hotel", "Cibo", "Trasporti", "Attività", "Shopping", "Altro"], id: \.self) {
+                    ForEach(
+                        ["Voli", "Hotel", "Cibo", "Trasporti", "Attività", "Shopping", "Altro"],
+                        id: \.self
+                    ) {
                         Text($0)
                     }
                 }
@@ -75,8 +83,8 @@ private struct AddExpenseView: View {
                         trip.expenses.append(
                             Expense(
                                 title: title.isEmpty ? category : title,
-                                amount: amount,
                                 category: category,
+                                amount: amount,
                                 date: Date()
                             )
                         )
@@ -95,12 +103,11 @@ struct PackingView: View {
     var body: some View {
         List {
             HStack {
-                TextField("Aggiungi alla valigia", text: $newItem)
+                TextField("Nuovo elemento", text: $newItem)
                 Button {
-                    guard !newItem.isEmpty else { return }
-                    trip.packing.append(
-                        PackingItem(title: newItem, category: "Personale")
-                    )
+                    let clean = newItem.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !clean.isEmpty else { return }
+                    trip.packing.append(PackingEntry(title: clean))
                     newItem = ""
                 } label: {
                     Image(systemName: "plus.circle.fill")
@@ -109,14 +116,14 @@ struct PackingView: View {
 
             ForEach($trip.packing) { $item in
                 Button {
-                    item.packed.toggle()
+                    item.isPacked.toggle()
                 } label: {
                     HStack {
-                        Image(systemName: item.packed ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(item.packed ? AppPalette.purple : .secondary)
+                        Image(systemName: item.isPacked ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(item.isPacked ? AppTheme.violet : .secondary)
                         Text(item.title)
-                            .strikethrough(item.packed)
                             .foregroundStyle(.primary)
+                            .strikethrough(item.isPacked)
                     }
                 }
             }
