@@ -1,44 +1,60 @@
 // !$*UTF8*$!
-{archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
 /* Begin PBXBuildFile section */
-		8B19D4CB35270D95A318A29D /* TripWalletApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0CB3316D282ADE4D5DD61B /* TripWalletApp.swift */; };
-		A253E7C5598475AF1C213BB8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B8947CE4E9C04283F2D3F21 /* Models.swift */; };
+		04200CFFD12D083534B07BB1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4FB5962ADE3FED0012F31D5D /* Assets.xcassets */; };
 		2F2A0AE8C0E3B892123DB7BF /* TravelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE772091845A99B6C17D36D3 /* TravelStore.swift */; };
-		83F631892DF4B30D18F21801 /* Managers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F4340CFC5329602FECB7EF /* Managers.swift */; };
-		6672D4AEA0620479CF667610 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0297846416CC6536D7F53A /* RootView.swift */; };
 		43438E94B7F6024DDC7CE376 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6A2A6001E92B7B6A68F9034 /* HomeView.swift */; };
+		6672D4AEA0620479CF667610 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0297846416CC6536D7F53A /* RootView.swift */; };
 		6AFCCFBF019371BBE69E836D /* TripsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 134B55F4563E41BAE7698B30 /* TripsView.swift */; };
-		E8682000E21A43DFF7BD3CB7 /* TripDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A5E57854B578F99D576D5D /* TripDetailView.swift */; };
-		BEBC4F283AB85B3A57F86FC2 /* ItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B81FA2C2F7E325DA94577EE /* ItemsView.swift */; };
+		83F631892DF4B30D18F21801 /* Managers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F4340CFC5329602FECB7EF /* Managers.swift */; };
+		8B19D4CB35270D95A318A29D /* TripWalletApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0CB3316D282ADE4D5DD61B /* TripWalletApp.swift */; };
+		8C41A2027630116F8C1D2863 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD706F6F919F379AB7A672FF /* SettingsView.swift */; };
 		9FD560034CFD32526CBA009A /* ExpensesPacking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE6BF4130E8AE739D3E2ADE /* ExpensesPacking.swift */; };
 		A1E309F455A91398249EB9E5 /* DocumentsPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19837C56C6D1C2D1134D7B9A /* DocumentsPlaces.swift */; };
-		8C41A2027630116F8C1D2863 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD706F6F919F379AB7A672FF /* SettingsView.swift */; };
-		04200CFFD12D083534B07BB1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4FB5962ADE3FED0012F31D5D /* Assets.xcassets */; };
+		A253E7C5598475AF1C213BB8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B8947CE4E9C04283F2D3F21 /* Models.swift */; };
+		BEBC4F283AB85B3A57F86FC2 /* ItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B81FA2C2F7E325DA94577EE /* ItemsView.swift */; };
+		E8682000E21A43DFF7BD3CB7 /* TripDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A5E57854B578F99D576D5D /* TripDetailView.swift */; };
 /* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
-		EE0CB3316D282ADE4D5DD61B /* TripWalletApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripWalletApp.swift; sourceTree = "<group>"; };
-		6B8947CE4E9C04283F2D3F21 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		FE772091845A99B6C17D36D3 /* TravelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelStore.swift; sourceTree = "<group>"; };
-		70F4340CFC5329602FECB7EF /* Managers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Managers.swift; sourceTree = "<group>"; };
-		2C0297846416CC6536D7F53A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		E6A2A6001E92B7B6A68F9034 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		134B55F4563E41BAE7698B30 /* TripsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsView.swift; sourceTree = "<group>"; };
-		F7A5E57854B578F99D576D5D /* TripDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripDetailView.swift; sourceTree = "<group>"; };
-		5B81FA2C2F7E325DA94577EE /* ItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemsView.swift; sourceTree = "<group>"; };
 		0AE6BF4130E8AE739D3E2ADE /* ExpensesPacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpensesPacking.swift; sourceTree = "<group>"; };
+		134B55F4563E41BAE7698B30 /* TripsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsView.swift; sourceTree = "<group>"; };
 		19837C56C6D1C2D1134D7B9A /* DocumentsPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsPlaces.swift; sourceTree = "<group>"; };
-		AD706F6F919F379AB7A672FF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		4FB5962ADE3FED0012F31D5D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1C35F1528A85321526664EFB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2C0297846416CC6536D7F53A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		4FB5962ADE3FED0012F31D5D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5B81FA2C2F7E325DA94577EE /* ItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemsView.swift; sourceTree = "<group>"; };
 		68BC50A13B70925ADC1D6A19 /* TripWallet.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TripWallet.entitlements; sourceTree = "<group>"; };
+		6B8947CE4E9C04283F2D3F21 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		70F4340CFC5329602FECB7EF /* Managers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Managers.swift; sourceTree = "<group>"; };
+		AD706F6F919F379AB7A672FF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C5BA2F1BDDF9000888BF07C4 /* TripWallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TripWallet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E6A2A6001E92B7B6A68F9034 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		EE0CB3316D282ADE4D5DD61B /* TripWalletApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripWalletApp.swift; sourceTree = "<group>"; };
+		F7A5E57854B578F99D576D5D /* TripDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripDetailView.swift; sourceTree = "<group>"; };
+		FE772091845A99B6C17D36D3 /* TravelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
 /* Begin PBXFrameworksBuildPhase section */
-		F01580CCB5F725E4E879D491 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		F01580CCB5F725E4E879D491 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
-		B28B7AF69320201D1CF206EB = {isa = PBXGroup; children = (3A2A88DEEFF3D1D23E496597 /* TripWallet */, FBDC4F23F93125BBEEAE800C /* Products */); sourceTree = "<group>"; };
-		3A2A88DEEFF3D1D23E496597 /* TripWallet */ = {isa = PBXGroup; children = (
+		3A2A88DEEFF3D1D23E496597 /* TripWallet */ = {
+			isa = PBXGroup;
+			children = (
 				EE0CB3316D282ADE4D5DD61B /* TripWalletApp.swift */,
 				6B8947CE4E9C04283F2D3F21 /* Models.swift */,
 				FE772091845A99B6C17D36D3 /* TravelStore.swift */,
@@ -54,20 +70,95 @@
 				4FB5962ADE3FED0012F31D5D /* Assets.xcassets */,
 				1C35F1528A85321526664EFB /* Info.plist */,
 				68BC50A13B70925ADC1D6A19 /* TripWallet.entitlements */,
-			); path = TripWallet; sourceTree = "<group>"; };
-		FBDC4F23F93125BBEEAE800C /* Products */ = {isa = PBXGroup; children = (C5BA2F1BDDF9000888BF07C4 /* TripWallet.app */); name = Products; sourceTree = "<group>"; };
+			);
+			path = TripWallet;
+			sourceTree = "<group>";
+		};
+		B28B7AF69320201D1CF206EB = {
+			isa = PBXGroup;
+			children = (
+				3A2A88DEEFF3D1D23E496597 /* TripWallet */,
+				FBDC4F23F93125BBEEAE800C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FBDC4F23F93125BBEEAE800C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C5BA2F1BDDF9000888BF07C4 /* TripWallet.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
 /* Begin PBXNativeTarget section */
-		0E8A3AD980EC179856012B7E /* TripWallet */ = {isa = PBXNativeTarget; buildConfigurationList = 7E26F70DFAB1992416D902F8; buildPhases = (72A8017E75795FC05F78F54C,F01580CCB5F725E4E879D491,963488E8A773A44C9A5DC523); buildRules = (); dependencies = (); name = TripWallet; productName = TripWallet; productReference = C5BA2F1BDDF9000888BF07C4; productType = "com.apple.product-type.application"; };
+		0E8A3AD980EC179856012B7E /* TripWallet */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7E26F70DFAB1992416D902F8 /* Build configuration list for PBXNativeTarget "TripWallet" */;
+			buildPhases = (
+				72A8017E75795FC05F78F54C /* Sources */,
+				F01580CCB5F725E4E879D491 /* Frameworks */,
+				963488E8A773A44C9A5DC523 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TripWallet;
+			productName = TripWallet;
+			productReference = C5BA2F1BDDF9000888BF07C4 /* TripWallet.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
+
 /* Begin PBXProject section */
-		98F54143AB4E86B28C3AFEE0 /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 1500; LastUpgradeCheck = 1500; TargetAttributes = {0E8A3AD980EC179856012B7E = {CreatedOnToolsVersion = 15.0; };};}; buildConfigurationList = 3522AC5749E011D2B023635A; compatibilityVersion = "Xcode 14.0"; developmentRegion = it; hasScannedForEncodings = 0; knownRegions = (it, Base); mainGroup = B28B7AF69320201D1CF206EB; productRefGroup = FBDC4F23F93125BBEEAE800C; projectDirPath = ""; projectRoot = ""; targets = (0E8A3AD980EC179856012B7E); };
+		98F54143AB4E86B28C3AFEE0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					0E8A3AD980EC179856012B7E = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 3522AC5749E011D2B023635A /* Build configuration list for PBXProject "TripWallet" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = it;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				it,
+				Base,
+			);
+			mainGroup = B28B7AF69320201D1CF206EB;
+			productRefGroup = FBDC4F23F93125BBEEAE800C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0E8A3AD980EC179856012B7E /* TripWallet */,
+			);
+		};
 /* End PBXProject section */
+
 /* Begin PBXResourcesBuildPhase section */
-		963488E8A773A44C9A5DC523 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (04200CFFD12D083534B07BB1); runOnlyForDeploymentPostprocessing = 0; };
+		963488E8A773A44C9A5DC523 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				04200CFFD12D083534B07BB1 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
-		72A8017E75795FC05F78F54C = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (
+		72A8017E75795FC05F78F54C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 				8B19D4CB35270D95A318A29D /* TripWalletApp.swift in Sources */,
 				A253E7C5598475AF1C213BB8 /* Models.swift in Sources */,
 				2F2A0AE8C0E3B892123DB7BF /* TravelStore.swift in Sources */,
@@ -80,16 +171,106 @@
 				9FD560034CFD32526CBA009A /* ExpensesPacking.swift in Sources */,
 				A1E309F455A91398249EB9E5 /* DocumentsPlaces.swift in Sources */,
 				8C41A2027630116F8C1D2863 /* SettingsView.swift in Sources */,
-			); runOnlyForDeploymentPostprocessing = 0; };
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
 /* Begin XCBuildConfiguration section */
-		907DDA722B0009F522E6CC17 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; }; name = Debug; };
-		1DE00F56133FD5F701D3ADF6 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; ENABLE_NS_ASSERTIONS = NO; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_VERSION = 5.0; VALIDATE_PRODUCT = YES; }; name = Release; };
-		E4CC03D48D772ABF5D72D504 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = TripWallet/TripWallet.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 7; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = TripWallet/Info.plist; MARKETING_VERSION = 3.0; PRODUCT_BUNDLE_IDENTIFIER = com.dmb.tripwallet; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1"; }; name = Debug; };
-		0BA094C68170D90CEF675522 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = TripWallet/TripWallet.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 7; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = TripWallet/Info.plist; MARKETING_VERSION = 3.0; PRODUCT_BUNDLE_IDENTIFIER = com.dmb.tripwallet; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1"; }; name = Release; };
+		0BA094C68170D90CEF675522 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TripWallet/TripWallet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = B8SC92LPR5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TripWallet/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dmb.tripwallet;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		1DE00F56133FD5F701D3ADF6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		907DDA722B0009F522E6CC17 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E4CC03D48D772ABF5D72D504 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TripWallet/TripWallet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = B8SC92LPR5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TripWallet/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dmb.tripwallet;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
+
 /* Begin XCConfigurationList section */
-		3522AC5749E011D2B023635A = {isa = XCConfigurationList; buildConfigurations = (907DDA722B0009F522E6CC17,1DE00F56133FD5F701D3ADF6); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		7E26F70DFAB1992416D902F8 = {isa = XCConfigurationList; buildConfigurations = (E4CC03D48D772ABF5D72D504,0BA094C68170D90CEF675522); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		3522AC5749E011D2B023635A /* Build configuration list for PBXProject "TripWallet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				907DDA722B0009F522E6CC17 /* Debug */,
+				1DE00F56133FD5F701D3ADF6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7E26F70DFAB1992416D902F8 /* Build configuration list for PBXNativeTarget "TripWallet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E4CC03D48D772ABF5D72D504 /* Debug */,
+				0BA094C68170D90CEF675522 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
-}; rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */; }
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+}
