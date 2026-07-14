@@ -4,6 +4,7 @@ import PhotosUI
 struct TripsView: View {
     @EnvironmentObject private var store: TravelStore
     @State private var showNewTrip = false
+    @State private var tripToDelete: Trip?
 
     var body: some View {
         ScrollView {
@@ -22,6 +23,13 @@ struct TripsView: View {
                             TripListCard(trip: trip)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                tripToDelete = trip
+                            } label: {
+                                Label("Elimina viaggio", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
@@ -42,6 +50,16 @@ struct TripsView: View {
         .sheet(isPresented: $showNewTrip) {
             NewTripWizard()
         }
+        .confirmationDialog("Eliminare questo viaggio?", isPresented: Binding(
+            get: { tripToDelete != nil },
+            set: { if !$0 { tripToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Elimina viaggio", role: .destructive) {
+                if let tripToDelete { store.deleteTrip(tripToDelete) }
+                tripToDelete = nil
+            }
+            Button("Annulla", role: .cancel) { tripToDelete = nil }
+        }
     }
 }
 
@@ -55,6 +73,14 @@ private struct TripListCard: View {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
+                } else if let value = trip.autoCoverURL, let url = URL(string: value) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            AppTheme.primaryGradient
+                        }
+                    }
                 } else {
                     AppTheme.primaryGradient
                 }
@@ -96,6 +122,7 @@ struct NewTripWizard: View {
     @State private var notes = ""
     @State private var photoItem: PhotosPickerItem?
     @State private var coverData: Data?
+    @State private var useAutomaticPhoto = true
     @State private var createdID: UUID?
 
     private var canContinue: Bool {
@@ -193,8 +220,13 @@ struct NewTripWizard: View {
 
     private var coverStep: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Scegli la foto")
+            Text("Copertina del viaggio")
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
+
+            Toggle("Usa automaticamente una foto della destinazione", isOn: $useAutomaticPhoto)
+                .padding(16)
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 17))
 
             Text("La città sarà sempre visibile sopra la foto, insieme al Paese e alle date.")
                 .foregroundStyle(.secondary)
@@ -294,6 +326,7 @@ struct NewTripWizard: View {
                         startDate: startDate,
                         endDate: endDate,
                         coverImage: coverData,
+                        autoCoverURL: useAutomaticPhoto && coverData == nil ? automaticDestinationPhotoURL(city: city, country: selectedCountry.name) : nil,
                         notes: notes
                     )
                     store.addTrip(trip)

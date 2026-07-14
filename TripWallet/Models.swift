@@ -45,6 +45,7 @@ struct Trip: Identifiable, Codable, Hashable {
     var startDate: Date
     var endDate: Date
     var coverImage: Data?
+    var autoCoverURL: String? = nil
     var notes: String = ""
     var bookings: [Booking] = []
     var tickets: [TravelTicket] = []
@@ -62,6 +63,25 @@ struct Trip: Identifiable, Codable, Hashable {
 
     var duration: Int {
         max(1, (Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)
+    }
+
+    var daysUntilDeparture: Int {
+        max(0, Calendar.current.dateComponents(
+            [.day],
+            from: Calendar.current.startOfDay(for: Date()),
+            to: Calendar.current.startOfDay(for: startDate)
+        ).day ?? 0)
+    }
+
+    var shareText: String {
+        """
+        \(title)
+        \(flagEmoji(for: countryCode)) \(city), \(countryName)
+        \(startDate.formatted(date: .long, time: .omitted)) – \(endDate.formatted(date: .long, time: .omitted))
+        Prenotazioni: \(bookings.count)
+        Biglietti: \(tickets.count)
+        Spese: \(totalExpenses.formatted(.currency(code: "EUR")))
+        """
     }
 }
 
@@ -159,4 +179,10 @@ func flagEmoji(for countryCode: String) -> String {
     let base: UInt32 = 127397
     let scalars = upper.unicodeScalars.compactMap { UnicodeScalar(base + $0.value) }
     return String(String.UnicodeScalarView(scalars))
+}
+
+func automaticDestinationPhotoURL(city: String, country: String) -> String? {
+    let query = "\(city),\(country),travel,city"
+        .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+    return "https://source.unsplash.com/1200x800/?\(query)"
 }

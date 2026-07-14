@@ -31,6 +31,13 @@ struct DocumentsView: View {
                         TicketCard(ticket: ticket)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            trip.tickets.removeAll { $0.id == ticket.id }
+                        } label: {
+                            Label("Elimina", systemImage: "trash")
+                        }
+                    }
                 }
             }
             .padding(20)

@@ -2,11 +2,31 @@ import SwiftUI
 
 struct TripDetailView: View {
     @EnvironmentObject private var store: TravelStore
+    @Environment(\.dismiss) private var dismiss
     let tripID: UUID
+    @State private var showEdit = false
+    @State private var showDelete = false
 
     var body: some View {
         if let trip = store.binding(for: tripID) {
             TripDetailContent(trip: trip)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Menu {
+                            Button { showEdit = true } label: { Label("Modifica viaggio", systemImage: "pencil") }
+                            ShareLink(item: trip.wrappedValue.shareText) { Label("Condividi riepilogo", systemImage: "square.and.arrow.up") }
+                            Button(role: .destructive) { showDelete = true } label: { Label("Elimina viaggio", systemImage: "trash") }
+                        } label: { Image(systemName: "ellipsis.circle") }
+                    }
+                }
+                .sheet(isPresented: $showEdit) { EditTripView(trip: trip) }
+                .confirmationDialog("Eliminare definitivamente il viaggio?", isPresented: $showDelete, titleVisibility: .visible) {
+                    Button("Elimina", role: .destructive) {
+                        store.deleteTrip(trip.wrappedValue)
+                        dismiss()
+                    }
+                    Button("Annulla", role: .cancel) {}
+                }
         } else {
             VStack(spacing: 14) {
                 Image(systemName: "airplane")
@@ -136,5 +156,29 @@ private struct FeatureTile: View {
         .background(gradient)
         .foregroundStyle(.white)
         .clipShape(RoundedRectangle(cornerRadius: 23))
+    }
+}
+
+private struct EditTripView: View {
+    @Binding var trip: Trip
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Titolo", text: $trip.title)
+                TextField("Città", text: $trip.city)
+                TextField("Paese", text: $trip.countryName)
+                DatePicker("Partenza", selection: $trip.startDate, displayedComponents: .date)
+                DatePicker("Ritorno", selection: $trip.endDate, in: trip.startDate..., displayedComponents: .date)
+                TextField("Note", text: $trip.notes, axis: .vertical)
+                Button("Aggiorna foto automatica") {
+                    trip.coverImage = nil
+                    trip.autoCoverURL = automaticDestinationPhotoURL(city: trip.city, country: trip.countryName)
+                }
+            }
+            .navigationTitle("Modifica viaggio")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fine") { dismiss() } } }
+        }
     }
 }

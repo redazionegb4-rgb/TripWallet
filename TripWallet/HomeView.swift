@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var store: TravelStore
     @State private var showNewTrip = false
+    @State private var appeared = false
 
     private var nextTrip: Trip? {
         store.upcomingTrips.first
@@ -20,6 +21,16 @@ struct HomeView: View {
                         DestinationCard(trip: trip)
                     }
                     .buttonStyle(.plain)
+                    .scaleEffect(appeared ? 1 : 0.96)
+                    .opacity(appeared ? 1 : 0)
+
+                    HStack {
+                        Text("Partenza").font(.title2.bold())
+                        Spacer()
+                        Text(trip.daysUntilDeparture == 0 ? "Oggi" : "tra \(trip.daysUntilDeparture) giorni")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.violet)
+                    }
 
                     Text("Riepilogo")
                         .font(.title2.bold())
@@ -49,7 +60,7 @@ struct HomeView: View {
                         .font(.title2.bold())
 
                     let futureBookings = trip.bookings
-                        .filter { $0.startDate >= Date() }
+                        .filter { $0.startDate >= (Calendar.current.date(byAdding: .minute, value: -10, to: Date()) ?? Date()) }
                         .sorted { $0.startDate < $1.startDate }
                         .prefix(3)
 
@@ -82,6 +93,11 @@ struct HomeView: View {
         .sheet(isPresented: $showNewTrip) {
             NewTripWizard()
         }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
+                appeared = true
+            }
+        }
     }
 
     private var header: some View {
@@ -107,6 +123,7 @@ struct HomeView: View {
                     .foregroundStyle(.white)
                     .clipShape(Circle())
                     .shadow(color: AppTheme.coral.opacity(0.28), radius: 12, y: 6)
+                    .rotationEffect(.degrees(appeared ? 0 : -90))
             }
         }
     }
@@ -122,6 +139,14 @@ struct DestinationCard: View {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
+                } else if let value = trip.autoCoverURL, let url = URL(string: value) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            AppTheme.primaryGradient
+                        }
+                    }
                 } else {
                     AppTheme.primaryGradient
                 }
